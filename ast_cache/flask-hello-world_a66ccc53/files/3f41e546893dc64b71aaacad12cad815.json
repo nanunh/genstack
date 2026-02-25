@@ -1,0 +1,100 @@
+{
+  "file_path": "app.py",
+  "language": "python",
+  "file_hash": "aef0170e47c24240e7050775605485b8",
+  "last_modified": 1761126807.78308,
+  "last_parsed": 1761126807.7830808,
+  "functions": [
+    {
+      "name": "hello_world",
+      "type": "function",
+      "start_line": 6,
+      "end_line": 12,
+      "start_byte": null,
+      "end_byte": null,
+      "parameters": [],
+      "methods": [],
+      "inheritance": [],
+      "decorators": [
+        "app.route"
+      ],
+      "is_async": false,
+      "docstring": null,
+      "scope": "global",
+      "file_path": "app.py"
+    }
+  ],
+  "classes": [],
+  "imports": [
+    {
+      "name": "flask.Flask",
+      "type": "import",
+      "start_line": 1,
+      "end_line": 1,
+      "start_byte": null,
+      "end_byte": null,
+      "parameters": [],
+      "methods": [],
+      "inheritance": [],
+      "decorators": [],
+      "is_async": false,
+      "docstring": null,
+      "scope": "global",
+      "file_path": "app.py"
+    },
+    {
+      "name": "flask.render_template",
+      "type": "import",
+      "start_line": 1,
+      "end_line": 1,
+      "start_byte": null,
+      "end_byte": null,
+      "parameters": [],
+      "methods": [],
+      "inheritance": [],
+      "decorators": [],
+      "is_async": false,
+      "docstring": null,
+      "scope": "global",
+      "file_path": "app.py"
+    },
+    {
+      "name": "flask.request",
+      "type": "import",
+      "start_line": 1,
+      "end_line": 1,
+      "start_byte": null,
+      "end_byte": null,
+      "parameters": [],
+      "methods": [],
+      "inheritance": [],
+      "decorators": [],
+      "is_async": false,
+      "docstring": null,
+      "scope": "global",
+      "file_path": "app.py"
+    }
+  ],
+  "variables": [
+    {
+      "name": "app",
+      "type": "variable",
+      "start_line": 3,
+      "end_line": 3,
+      "start_byte": null,
+      "end_byte": null,
+      "parameters": [],
+      "methods": [],
+      "inheritance": [],
+      "decorators": [],
+      "is_async": false,
+      "docstring": null,
+      "scope": "global",
+      "file_path": "app.py"
+    }
+  ],
+  "total_lines": 15,
+  "complexity_score": 3,
+  "has_syntax_errors": false,
+  "parser_type": "python_builtin"
+}

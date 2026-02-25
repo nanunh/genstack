@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block title %}Parent Dashboard - BabySitter Booking{% endblock %}
+
+{% block content %}
+<h1 style="margin: 2rem 0; color: #4a6fa5;">Welcome, {{ current_user.name }}!</h1>
+
+<div class="dashboard">
+    <div class="dashboard-sidebar">
+        <h3 class="dashboard-title">Quick Links</h3>
+        <ul style="list-style: none;">
+            <li style="margin-bottom: 1rem;"><a href="#my-bookings" style="text-decoration: none; color: #4a6fa5;">My Bookings</a></li>
+            <li style="margin-bottom: 1rem;"><a href="#find-sitters" style="text-decoration: none; color: #4a6fa5;">Find Sitters</a></li>
+        </ul>
+    </div>
+    
+    <div class="dashboard-main">
+        <section id="my-bookings">
+            <h2 class="dashboard-title">My Bookings</h2>
+            
+            {% if bookings %}
+                <ul class="booking-list">
+                    {% for booking in bookings %}
+                        <li class="booking-item">
+                            <div class="booking-header">
+                                <span class="booking-title">Booking with {{ booking.sitter.name }}</span>
+                                <span class="booking-status status-{{ booking.status }}">{{ booking.status|capitalize }}</span>
+                            </div>
+                            <div class="booking-details">
+                                <p>Date: {{ booking.start_time.strftime('%B %d, %Y') }}</p>
+                                <p>Time: {{ booking.start_time.strftime('%I:%M %p') }} - {{ booking.end_time.strftime('%I:%M %p') }}</p>
+                            </div>
+                            <div class="booking-actions">
+                                {% if booking.status == 'completed' and not booking.reviews %}
+                                    <a href="{{ url_for('review_booking', booking_id=booking.id) }}" class="btn btn-secondary">Leave Review</a>
+                                {% endif %}
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>You don't have any bookings yet.</p>
+            {% endif %}
+        </section>
+        
+        <section id="find-sitters" style="margin-top: 2rem;">
+            <h2 class="dashboard-title">Find Sitters</h2>
+            
+            {% if sitters %}
+                <div class="sitter-grid">
+                    {% for sitter in sitters %}
+                        <div class="card sitter-card">
+                            <div class="sitter-info">
+                                <h3 class="sitter-name">{{ sitter.name }}</h3>
+                                
+                                {% if sitter.sitter_profile %}
+                                    {% if sitter.sitter_profile.hourly_rate %}
+                                        <p class="sitter-rate">${{ sitter.sitter_profile.hourly_rate }}/hour</p>
+                                    {% endif %}
+                                    
+                                    {% if sitter.sitter_profile.bio %}
+                                        <p>{{ sitter.sitter_profile.bio|truncate(100) }}</p>
+                                    {% else %}
+                                        <p>No bio available</p>
+                                    {% endif %}
+                                {% else %}
+                                    <p>Profile not completed</p>
+                                {% endif %}
+                                
+                                {% set reviews = sitter.reviews_received %}
+                                {% if reviews %}
+                                    {% set avg_rating = (reviews|sum(attribute='rating') / reviews|length)|round(1) %}
+                                    <p class="sitter-rating">★ {{ avg_rating }} ({{ reviews|length }} reviews)</p>
+                                {% else %}
+                                    <p class="sitter-rating">No reviews yet</p>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="card-footer">
+                                <a href="{{ url_for('view_sitter', sitter_id=sitter.id) }}" class="btn btn-secondary">View Profile</a>
+                                <a href="{{ url_for('book_sitter', sitter_id=sitter.id) }}" class="btn">Book Now</a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>No sitters available at the moment.</p>
+            {% endif %}
+        </section>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,98 @@
+{
+  "file_path": "src/pages/Dashboard.jsx",
+  "language": "javascript",
+  "file_hash": "444087cf3e7b507a23f0b022d6d97f79",
+  "last_modified": 1761207050.1486316,
+  "last_parsed": 1761207050.1486318,
+  "functions": [
+    {
+      "name": "Dashboard",
+      "type": "function",
+      "start_line": 3,
+      "end_line": 3,
+      "start_byte": null,
+      "end_byte": null,
+      "parameters": [],
+      "methods": [],
+      "inheritance": [],
+      "decorators": [],
+      "is_async": false,
+      "docstring": null,
+      "scope": "global",
+      "file_path": "src/pages/Dashboard.jsx"
+    },
+    {
+      "name": "handleLogout",
+      "type": "function",
+      "start_line": 6,
+      "end_line": 6,
+      "start_byte": null,
+      "end_byte": null,
+      "parameters": [],
+      "methods": [],
+      "inheritance": [],
+      "decorators": [],
+      "is_async": false,
+      "docstring": null,
+      "scope": "global",
+      "file_path": "src/pages/Dashboard.jsx"
+    },
+    {
+      "name": "Dashboard",
+      "type": "function",
+      "start_line": 3,
+      "end_line": 3,
+      "start_byte": null,
+      "end_byte": null,
+      "parameters": [],
+      "methods": [],
+      "inheritance": [],
+      "decorators": [],
+      "is_async": false,
+      "docstring": null,
+      "scope": "global",
+      "file_path": "src/pages/Dashboard.jsx"
+    }
+  ],
+  "classes": [],
+  "imports": [
+    {
+      "name": "../context/AuthContext",
+      "type": "import",
+      "start_line": 1,
+      "end_line": 1,
+      "start_byte": null,
+      "end_byte": null,
+      "parameters": [],
+      "methods": [],
+      "inheritance": [],
+      "decorators": [],
+      "is_async": false,
+      "docstring": null,
+      "scope": "global",
+      "file_path": "src/pages/Dashboard.jsx"
+    }
+  ],
+  "variables": [
+    {
+      "name": "handleLogout",
+      "type": "variable",
+      "start_line": 6,
+      "end_line": 6,
+      "start_byte": null,
+      "end_byte": null,
+      "parameters": [],
+      "methods": [],
+      "inheritance": [],
+      "decorators": [],
+      "is_async": false,
+      "docstring": null,
+      "scope": "global",
+      "file_path": "src/pages/Dashboard.jsx"
+    }
+  ],
+  "total_lines": 25,
+  "complexity_score": 3,
+  "has_syntax_errors": false,
+  "parser_type": "regex"
+}

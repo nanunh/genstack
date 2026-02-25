@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ sitter.name }} - BabySitter Booking{% endblock %}
+
+{% block content %}
+<div style="margin: 2rem 0;">
+    <a href="{{ url_for('parent_dashboard') }}" style="text-decoration: none; color: #4a6fa5;">&larr; Back to Dashboard</a>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 2rem;">
+    <div style="flex: 1; min-width: 300px;">
+        <div class="card">
+            <h1 style="color: #4a6fa5; margin-bottom: 1rem;">{{ sitter.name }}</h1>
+            
+            {% set reviews = sitter.reviews_received %}
+            {% if reviews %}
+                {% set avg_rating = (reviews|sum(attribute='rating') / reviews|length)|round(1) %}
+                <p class="sitter-rating" style="font-size: 1.2rem;">★ {{ avg_rating }} ({{ reviews|length }} reviews)</p>
+            {% else %}
+                <p class="sitter-rating">No reviews yet</p>
+            {% endif %}
+            
+            {% if sitter.sitter_profile %}
+                {% if sitter.sitter_profile.hourly_rate %}
+                    <p style="font-size: 1.2rem; font-weight: bold; margin: 1rem 0;"><span style="color: #4a6fa5;">${{ sitter.sitter_profile.hourly_rate }}</span>/hour</p>
+                {% endif %}
+                
+                {% if sitter.sitter_profile.bio %}
+                    <div style="margin: 1.5rem 0;">
+                        <h3 style="color: #4a6fa5; margin-bottom: 0.5rem;">About</h3>
+                        <p>{{ sitter.sitter_profile.bio }}</p>
+                    </div>
+                {% endif %}
+                
+                {% if sitter.sitter_profile.experience %}
+                    <div style="margin: 1.5rem 0;">
+                        <h3 style="color: #4a6fa5; margin-bottom: 0.5rem;">Experience</h3>
+                        <p>{{ sitter.sitter_profile.experience }}</p>
+                    </div>
+                {% endif %}
+                
+                {% if sitter.sitter_profile.availability %}
+                    <div style="margin: 1.5rem 0;">
+                        <h3 style="color: #4a6fa5; margin-bottom: 0.5rem;">Availability</h3>
+                        <p>{{ sitter.sitter_profile.availability }}</p>
+                    </div>
+                {% endif %}
+            {% else %}
+                <p>This sitter hasn't completed their profile yet.</p>
+            {% endif %}
+            
+            <div style="margin-top: 2rem;">
+                <a href="{{ url_for('book_sitter', sitter_id=sitter.id) }}" class="btn">Book This Sitter</a>
+            </div>
+        </div>
+    </div>
+    
+    <div style="flex: 2; min-width: 300px;">
+        <div class="card">
+            <h2 style="color: #4a6fa5; margin-bottom: 1.5rem;">Reviews</h2>
+            
+            {% if reviews %}
+                <ul class="review-list">
+                    {% for review in reviews %}
+                        <li class="review-item">
+                            <div class="review-header">
+                                <span class="review-author">{{ review.reviewer.name }}</span>
+                                <span class="review-date">{{ review.created_at.strftime('%B %d, %Y') }}</span>
+                            </div>
+                            <div class="review-rating">
+                                {% for i in range(5) %}
+                                    {% if i < review.rating %}
+                                        ★
+                                    {% else %}
+                                        ☆
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% if review.comment %}
+                                <div class="review-comment">{{ review.comment }}</div>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No reviews yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

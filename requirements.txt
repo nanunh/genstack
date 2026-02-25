@@ -1,0 +1,47 @@
+# Requires Python 3.10+
+
+# Web framework
+fastapi==0.115.0
+uvicorn==0.30.6
+python-multipart==0.0.12
+
+# Environment variables
+python-dotenv==1.0.1
+
+# Data validation
+pydantic==2.9.2
+
+# Typing helpers
+typing-extensions==4.12.2
+
+# Anthropic API client (Claude models)
+anthropic==0.39.0
+httpx<0.28.0
+
+# SSH and SCP file transfer
+paramiko==3.5.0
+scp==0.14.5
+
+# System process utilities
+psutil==6.1.0
+
+# Async file I/O
+aiofiles==24.1.0
+
+# Tree-sitter for multi-language AST parsing
+tree-sitter==0.21.3
+# tree-sitter-languages==1.10.2  # optional: pre-built grammars
+
+# Database
+mysql-connector-python==8.0.33
+
+# Authentication & security
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+bcrypt==4.0.1
+cryptography==41.0.3
+
+# Testing (dev only)
+pytest==8.3.4
+pytest-asyncio==0.24.0
+httpx>=0.27.0,<0.28.0

@@ -1,0 +1,26 @@
+{
+  "static/js/script.js": {
+    "file_hash": "d2979502f85523baea053aed5693feb7",
+    "last_parsed": 1760783961.8832333,
+    "cache_filename": "2e20fa188245daf6805c4f1796d9f348.json",
+    "language": "javascript"
+  },
+  "static/css/styles.css": {
+    "file_hash": "b0bc3abce1c71ee791e1c4930c234307",
+    "last_parsed": 1760783984.5007675,
+    "cache_filename": "7962f8c018310ce9bd37011f4b6ce5e3.json",
+    "language": "css"
+  },
+  "templates/index.html": {
+    "file_hash": "2533697c33fe71f6750969b365d97402",
+    "last_parsed": 1760784010.1288154,
+    "cache_filename": "fb5aa1cd1261d08d02db6f7dc314d9ab.json",
+    "language": "html"
+  },
+  "app.py": {
+    "file_hash": "e58931edd3ed3da71b5bfb7462252402",
+    "last_parsed": 1761121366.8701243,
+    "cache_filename": "3f41e546893dc64b71aaacad12cad815.json",
+    "language": "python"
+  }
+}

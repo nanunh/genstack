@@ -1,0 +1,15 @@
+{
+  "file_path": ".env.example",
+  "language": "unknown",
+  "file_hash": "0fd2720af690a0caf4a40a60bfdf5597",
+  "last_modified": 1762159189.9361038,
+  "last_parsed": 1762159189.9361048,
+  "functions": [],
+  "classes": [],
+  "imports": [],
+  "variables": [],
+  "total_lines": 10,
+  "complexity_score": 0,
+  "has_syntax_errors": false,
+  "parser_type": "generic"
+}

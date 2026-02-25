@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Review Booking - BabySitter Booking{% endblock %}
+
+{% block content %}
+<div style="margin: 2rem 0;">
+    <a href="{{ url_for('parent_dashboard') }}" style="text-decoration: none; color: #4a6fa5;">&larr; Back to Dashboard</a>
+</div>
+
+<div class="form-container">
+    <h2 class="form-title">Review Your Booking with {{ booking.sitter.name }}</h2>
+    
+    <div style="margin-bottom: 1.5rem; padding: 1rem; background-color: #f8f9fa; border-radius: 4px;">
+        <h3 style="color: #4a6fa5; margin-bottom: 0.5rem;">Booking Details</h3>
+        <p>Date: {{ booking.start_time.strftime('%B %d, %Y') }}</p>
+        <p>Time: {{ booking.start_time.strftime('%I:%M %p') }} - {{ booking.end_time.strftime('%I:%M %p') }}</p>
+    </div>
+    
+    <form method="POST" action="{{ url_for('review_booking', booking_id=booking.id) }}">
+        <div class="form-group">
+            <label for="rating">Rating</label>
+            <div style="display: flex; gap: 1rem;">
+                {% for i in range(1, 6) %}
+                    <div class="form-check">
+                        <input type="radio" id="rating-{{ i }}" name="rating" value="{{ i }}" {% if i == 5 %}checked{% endif %}>
+                        <label for="rating-{{ i }}">{{ i }} ★</label>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="comment">Comments (Optional)</label>
+            <textarea id="comment" name="comment" class="form-control" rows="4" placeholder="Share your experience with this sitter..."></textarea>
+        </div>
+        
+        <button type="submit" class="btn">Submit Review</button>
+    </form>
+</div>
+{% endblock %}

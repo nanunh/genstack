@@ -1,0 +1,20 @@
+{
+  "templates/index.html": {
+    "file_hash": "5d9277944afbc850f992a0be4cad3b1a",
+    "last_parsed": 1760716012.117561,
+    "cache_filename": "fb5aa1cd1261d08d02db6f7dc314d9ab.json",
+    "language": "html"
+  },
+  "static/css/style.css": {
+    "file_hash": "9d3d74d1c8b26ed97c67359f31b403f3",
+    "last_parsed": 1760716024.8990195,
+    "cache_filename": "a16a51aaea7dc21d3202074fc7228024.json",
+    "language": "css"
+  },
+  "static/js/script.js": {
+    "file_hash": "b01bb5d23eb7871637a9d67dfc3eb256",
+    "last_parsed": 1760716045.671603,
+    "cache_filename": "2e20fa188245daf6805c4f1796d9f348.json",
+    "language": "javascript"
+  }
+}

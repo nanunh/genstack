@@ -1,0 +1,7 @@
+{
+  "project_id": "4cc01bae-804a-44e4-a240-579cfe09e23e",
+  "project_name": "mailanalyser",
+  "created_at": "2025-10-28T18:42:35.996196",
+  "instructions": "# AI Mail Analyzer - Setup Instructions\n\n## Prerequisites\n- Python 3.7 or higher\n- An OpenAI API key\n- Email account with IMAP access\n\n## Setup Steps\n\n1. **Clone or download the project files**\n\n2. **Create a virtual environment**:\n   ```\n   python -m venv venv\n   source venv/bin/activate  # On Windows: venv\\Scripts\\activate\n   ```\n\n3. **Install dependencies**:\n   ```\n   pip install -r requirements.txt\n   ```\n\n4. **Set up environment variables**:\n   - Copy `.env.example` to `.env`\n   - Add your OpenAI API key to the `.env` file\n   - Set a secure Flask secret key\n\n5. **Run the application**:\n   ```\n   python app.py\n   ```\n\n6. **Access the application**:\n   - Open your browser and go to `http://localhost:5000`\n   - Log in with your email credentials\n\n## Email Configuration Notes\n\n- For Gmail users:\n  - You may need to enable \"Less secure app access\" or create an app password\n  - Use `imap.gmail.com` as the server and `993` as the port\n\n- For Outlook/Hotmail users:\n  - Use `outlook.office365.com` as the server and `993` as the port\n\n- For Yahoo Mail users:\n  - Use `imap.mail.yahoo.com` as the server and `993` as the port\n\nThe application will connect to your email account, fetch your emails, and allow you to analyze them using AI-powered tools.",
+  "file_count": 12
+}

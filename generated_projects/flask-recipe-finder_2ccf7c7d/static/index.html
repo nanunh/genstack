@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recipe Finder</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">Recipe Finder</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="nav-home">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="nav-favorites">My Favorites</a>
+                    </li>
+                    <li class="nav-item admin-only" style="display: none;">
+                        <a class="nav-link" href="#" id="nav-admin">Admin Dashboard</a>
+                    </li>
+                </ul>
+                <div class="d-flex" id="auth-buttons">
+                    <button class="btn btn-outline-light me-2" id="btn-login">Login</button>
+                    <button class="btn btn-light" id="btn-register">Register</button>
+                </div>
+                <div class="d-flex" id="user-info" style="display: none;">
+                    <span class="navbar-text me-3">Welcome, <span id="username"></span></span>
+                    <button class="btn btn-outline-light" id="btn-logout">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Home Page -->
+        <div id="page-home">
+            <div class="row mb-4">
+                <div class="col-md-8 offset-md-2">
+                    <div class="card">
+                        <div class="card-body">
+                            <h2 class="card-title text-center mb-4">Find Recipes by Ingredients</h2>
+                            <form id="search-form">
+                                <div class="mb-3">
+                                    <label for="ingredients" class="form-label">Enter ingredients (comma separated)</label>
+                                    <input type="text" class="form-control" id="ingredients" 
+                                           placeholder="e.g. chicken, rice, onions">
+                                </div>
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary">Search Recipes</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="search-results" class="row row-cols-1 row-cols-md-3 g-4"></div>
+        </div>
+
+        <!-- Recipe Details Page -->
+        <div id="page-recipe-details" style="display: none;">
+            <button class="btn btn-outline-primary mb-3" id="btn-back-to-results">
+                <i class="fas fa-arrow-left"></i> Back to Results
+            </button>
+            <div id="recipe-details-content"></div>
+        </div>
+
+        <!-- Favorites Page -->
+        <div id="page-favorites" style="display: none;">
+            <h2 class="mb-4">My Favorite Recipes</h2>
+            <div id="favorites-content" class="row row-cols-1 row-cols-md-3 g-4"></div>
+            <div id="no-favorites" class="text-center" style="display: none;">
+                <p class="lead">You haven't saved any favorites yet.</p>
+                <a href="#" id="btn-browse-recipes" class="btn btn-primary">Browse Recipes</a>
+            </div>
+        </div>
+
+        <!-- Admin Dashboard -->
+        <div id="page-admin" style="display: none;">
+            <h2 class="mb-4">Admin Dashboard</h2>
+            
+            <ul class="nav nav-tabs mb-4" id="adminTabs">
+                <li class="nav-item">
+                    <a class="nav-link active" id="users-tab" data-bs-toggle="tab" href="#users">Users</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="analytics-tab" data-bs-toggle="tab" href="#analytics">Analytics</a>
+                </li>
+            </ul>
+            
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="users">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Joined</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="tab-pane fade" id="analytics">
+                    <div class="row">
+                        <div class="col-md-4 mb-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">User Count</h5>
+                                    <p class="display-4" id="user-count">0</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-8 mb-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Activity Breakdown</h5>
+                                    <div class="row text-center">
+                                        <div class="col-4">
+                                            <p class="lead mb-1" id="search-count">0</p>
+                                            <p>Searches</p>
+                                        </div>
+                                        <div class="col-4">
+                                            <p class="lead mb-1" id="view-count">0</p>
+                                            <p>Recipe Views</p>
+                                        </div>
+                                        <div class="col-4">
+                                            <p class="lead mb-1" id="favorite-count">0</p>
+                                            <p>Favorites</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">Popular Recipes</h5>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Recipe</th>
+                                            <th>Favorites</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="popular-recipes-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Login Modal -->
+    <div class="modal fade" id="loginModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Login</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="login-form">
+                        <div class="mb-3">
+                            <label for="login-username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="login-username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="login-password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="login-password" required>
+                        </div>
+                        <div class="alert alert-danger" id="login-error" style="display: none;"></div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Login</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div class="modal fade" id="registerModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Register</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="register-form">
+                        <div class="mb-3">
+                            <label for="register-username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="register-username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="register-email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="register-email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="register-password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="register-password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="register-confirm-password" class="form-label">Confirm Password</label>
+                            <input type="password" class="form-control" id="register-confirm-password" required>
+                        </div>
+                        <div class="alert alert-danger" id="register-error" style="display: none;"></div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Register</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>

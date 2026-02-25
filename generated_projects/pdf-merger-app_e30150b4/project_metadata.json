@@ -1,0 +1,7 @@
+{
+  "project_id": "e30150b4-d778-4f92-94a9-8cf2cac54f9c",
+  "project_name": "pdf-merger-app",
+  "created_at": "2026-02-25T13:15:21.156883",
+  "instructions": "# PDF Merger Application - Setup Instructions\n\n## Quick Start\n\n1. **Install Python dependencies:**\n   ```bash\n   pip install -r requirements.txt\n   ```\n\n2. **Run the application:**\n   ```bash\n   python app.py\n   ```\n\n3. **Open browser:**\n   Navigate to `http://localhost:5000`\n\n## How to Use\n\n1. Upload 2 or more PDF files (drag & drop or browse)\n2. Review the file list\n3. Click \"Merge PDFs\"\n4. Download your merged PDF\n\n## Features\n\n\u2705 Simple HTML/CSS/JS frontend\n\u2705 Python Flask backend\n\u2705 Drag and drop file upload\n\u2705 Multiple PDF merge\n\u2705 Instant download\n\u2705 Modern responsive UI\n\u2705 No database required\n\u2705 Session-based file handling\n\n## Technology Stack (As Requested)\n\n- **Frontend**: Pure HTML, CSS, JavaScript (no frameworks)\n- **Backend**: Python Flask\n- **PDF Processing**: PyPDF2\n\nThe application is production-ready with error handling, file validation, and automatic cleanup!",
+  "file_count": 7
+}

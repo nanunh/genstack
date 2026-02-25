@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Sitter Dashboard - BabySitter Booking{% endblock %}
+
+{% block content %}
+<h1 style="margin: 2rem 0; color: #4a6fa5;">Welcome, {{ current_user.name }}!</h1>
+
+<div class="dashboard">
+    <div class="dashboard-sidebar">
+        <h3 class="dashboard-title">Quick Links</h3>
+        <ul style="list-style: none;">
+            <li style="margin-bottom: 1rem;"><a href="#booking-requests" style="text-decoration: none; color: #4a6fa5;">Booking Requests</a></li>
+            <li style="margin-bottom: 1rem;"><a href="#upcoming-bookings" style="text-decoration: none; color: #4a6fa5;">Upcoming Bookings</a></li>
+            <li style="margin-bottom: 1rem;"><a href="{{ url_for('sitter_profile') }}" style="text-decoration: none; color: #4a6fa5;">Edit Profile</a></li>
+        </ul>
+        
+        <div style="margin-top: 2rem;">
+            <h3 class="dashboard-title">My Profile Summary</h3>
+            {% if profile %}
+                {% if profile.hourly_rate %}
+                    <p><strong>Rate:</strong> ${{ profile.hourly_rate }}/hour</p>
+                {% else %}
+                    <p><strong>Rate:</strong> Not set</p>
+                {% endif %}
+                
+                {% set reviews = current_user.reviews_received %}
+                {% if reviews %}
+                    {% set avg_rating = (reviews|sum(attribute='rating') / reviews|length)|round(1) %}
+                    <p><strong>Rating:</strong> ★ {{ avg_rating }} ({{ reviews|length }} reviews)</p>
+                {% else %}
+                    <p><strong>Rating:</strong> No reviews yet</p>
+                {% endif %}
+                
+                {% if not profile.bio or not profile.experience or not profile.hourly_rate %}
+                    <div style="margin-top: 1rem;">
+                        <p style="color: #721c24;">Your profile is incomplete!</p>
+                        <a href="{{ url_for('sitter_profile') }}" class="btn btn-secondary" style="margin-top: 0.5rem;">Complete Profile</a>
+                    </div>
+                {% endif %}
+            {% else %}
+                <p>Profile not found. Please contact support.</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="dashboard-main">
+        <section id="booking-requests">
+            <h2 class="dashboard-title">Booking Requests</h2>
+            
+            {% set pending_bookings = bookings|selectattr('status', 'equalto', 'pending')|list %}
+            {% if pending_bookings %}
+                <ul class="booking-list">
+                    {% for booking in pending_bookings %}
+                        <li class="booking-item">
+                            <div class="booking-header">
+                                <span class="booking-title">Request from {{ booking.parent.name }}</span>
+                                <span class="booking-status status-pending">Pending</span>
+                            </div>
+                            <div class="booking-details">
+                                <p>Date: {{ booking.start_time.strftime('%B %d, %Y') }}</p>
+                                <p>Time: {{ booking.start_time.strftime('%I:%M %p') }} - {{ booking.end_time.strftime('%I:%M %p') }}</p>
+                                <p>Duration: {{ ((booking.end_time - booking.start_time).total_seconds() / 3600)|round(1) }} hours</p>
+                                {% if profile and profile.hourly_rate %}
+                                    <p>Estimated earnings: ${{ (((booking.end_time - booking.start_time).total_seconds() / 3600) * profile.hourly_rate)|round(2) }}</p>
+                                {% endif %}
+                            </div>
+                            <div class="booking-actions">
+                                <form method="POST" action="{{ url_for('update_booking', booking_id=booking.id) }}" style="display: inline;">
+                                    <input type="hidden" name="action" value="accept">
+                                    <button type="submit" class="btn">Accept</button>
+                                </form>
+                                <form method="POST" action="{{ url_for('update_booking', booking_id=booking.id) }}" style="display: inline;">
+                                    <input type="hidden" name="action" value="reject">
+                                    <button type="submit" class="btn btn-secondary">Decline</button>
+                                </form>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No pending booking requests.</p>
+            {% endif %}
+        </section>
+        
+        <section id="upcoming-bookings" style="margin-top: 2rem;">
+            <h2 class="dashboard-title">Upcoming Bookings</h2>
+            
+            {% set upcoming_bookings = bookings|selectattr('status', 'equalto', 'accepted')|list %}
+            {% if upcoming_bookings %}
+                <ul class="booking-list">
+                    {% for booking in upcoming_bookings %}
+                        <li class="booking-item">
+                            <div class="booking-header">
+                                <span class="booking-title">Booking with {{ booking.parent.name }}</span>
+                                <span class="booking-status status-accepted">Accepted</span>
+                            </div>
+                            <div class="booking-details">
+                                <p>Date: {{ booking.start_time.strftime('%B %d, %Y') }}</p>
+                                <p>Time: {{ booking.start_time.strftime('%I:%M %p') }} - {{ booking.end_time.strftime('%I:%M %p') }}</p>
+                                <p>Duration: {{ ((booking.end_time - booking.start_time).total_seconds() / 3600)|round(1) }} hours</p>
+                                {% if profile and profile.hourly_rate %}
+                                    <p>Estimated earnings: ${{ (((booking.end_time - booking.start_time).total_seconds() / 3600) * profile.hourly_rate)|round(2) }}</p>
+                                {% endif %}
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No upcoming bookings.</p>
+            {% endif %}
+        </section>
+        
+        <section id="past-bookings" style="margin-top: 2rem;">
+            <h2 class="dashboard-title">Past Bookings</h2>
+            
+            {% set completed_bookings = bookings|selectattr('status', 'equalto', 'completed')|list %}
+            {% if completed_bookings %}
+                <ul class="booking-list">
+                    {% for booking in completed_bookings %}
+                        <li class="booking-item">
+                            <div class="booking-header">
+                                <span class="booking-title">Booking with {{ booking.parent.name }}</span>
+                                <span class="booking-status status-completed">Completed</span>
+                            </div>
+                            <div class="booking-details">
+                                <p>Date: {{ booking.start_time.strftime('%B %d, %Y') }}</p>
+                                <p>Time: {{ booking.start_time.strftime('%I:%M %p') }} - {{ booking.end_time.strftime('%I:%M %p') }}</p>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No past bookings.</p>
+            {% endif %}
+        </section>
+    </div>
+</div>
+{% endblock %}

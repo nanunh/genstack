@@ -1,0 +1,147 @@
+{
+  "be6a8b57-f8e4-4e32-9bec-538871d949d6": {
+    "total_tokens": 367082,
+    "input_tokens": 351247,
+    "output_tokens": 15835,
+    "cost_estimate": 1.291266,
+    "operations": [
+      {
+        "input_tokens": 3049,
+        "output_tokens": 6049,
+        "total_tokens": 9098,
+        "timestamp": 1761206759.5832691,
+        "operation_type": "project_generation",
+        "project_id": "be6a8b57-f8e4-4e32-9bec-538871d949d6",
+        "model": "claude-3-7-sonnet-20250219",
+        "cost_estimate": 0.099882
+      },
+      {
+        "input_tokens": 3136,
+        "output_tokens": 3155,
+        "total_tokens": 6291,
+        "timestamp": 1761207055.765189,
+        "operation_type": "code_assistant",
+        "project_id": "be6a8b57-f8e4-4e32-9bec-538871d949d6",
+        "model": "claude-3-7-sonnet-20250219",
+        "cost_estimate": 0.056733
+      },
+      {
+        "input_tokens": 3676,
+        "output_tokens": 1112,
+        "total_tokens": 4788,
+        "timestamp": 1761207169.1866891,
+        "operation_type": "code_assistant",
+        "project_id": "be6a8b57-f8e4-4e32-9bec-538871d949d6",
+        "model": "claude-3-7-sonnet-20250219",
+        "cost_estimate": 0.027707999999999997
+      },
+      {
+        "input_tokens": 3842,
+        "output_tokens": 1562,
+        "total_tokens": 5404,
+        "timestamp": 1761207283.0571396,
+        "operation_type": "code_assistant",
+        "project_id": "be6a8b57-f8e4-4e32-9bec-538871d949d6",
+        "model": "claude-3-7-sonnet-20250219",
+        "cost_estimate": 0.034956
+      },
+      {
+        "input_tokens": 168780,
+        "output_tokens": 1531,
+        "total_tokens": 170311,
+        "timestamp": 1761214288.0662053,
+        "operation_type": "code_assistant",
+        "project_id": "be6a8b57-f8e4-4e32-9bec-538871d949d6",
+        "model": "claude-3-7-sonnet-20250219",
+        "cost_estimate": 0.529305
+      },
+      {
+        "input_tokens": 168764,
+        "output_tokens": 2426,
+        "total_tokens": 171190,
+        "timestamp": 1761214410.1489697,
+        "operation_type": "code_assistant",
+        "project_id": "be6a8b57-f8e4-4e32-9bec-538871d949d6",
+        "model": "claude-3-7-sonnet-20250219",
+        "cost_estimate": 0.542682
+      }
+    ],
+    "created_at": 1761206759.5832691
+  },
+  "4cc01bae-804a-44e4-a240-579cfe09e23e": {
+    "total_tokens": 18607,
+    "input_tokens": 3033,
+    "output_tokens": 15574,
+    "cost_estimate": 0.24270899999999998,
+    "operations": [
+      {
+        "input_tokens": 3033,
+        "output_tokens": 15574,
+        "total_tokens": 18607,
+        "timestamp": 1761657155.996473,
+        "operation_type": "project_generation",
+        "project_id": "4cc01bae-804a-44e4-a240-579cfe09e23e",
+        "model": "claude-3-7-sonnet-20250219",
+        "cost_estimate": 0.24270899999999998
+      }
+    ],
+    "created_at": 1761657155.996473
+  },
+  "1a5ab988-89ff-4e59-975b-5818ef83e8d7": {
+    "total_tokens": 12617,
+    "input_tokens": 3059,
+    "output_tokens": 9558,
+    "cost_estimate": 0.152547,
+    "operations": [
+      {
+        "input_tokens": 3059,
+        "output_tokens": 9558,
+        "total_tokens": 12617,
+        "timestamp": 1761810950.940099,
+        "operation_type": "project_generation",
+        "project_id": "1a5ab988-89ff-4e59-975b-5818ef83e8d7",
+        "model": "claude-3-7-sonnet-20250219",
+        "cost_estimate": 0.152547
+      }
+    ],
+    "created_at": 1761810950.940099
+  },
+  "2ccf7c7d-119a-43a3-90b3-21c5c5a95adf": {
+    "total_tokens": 4009,
+    "input_tokens": 3113,
+    "output_tokens": 896,
+    "cost_estimate": 0.022779,
+    "operations": [
+      {
+        "input_tokens": 3113,
+        "output_tokens": 896,
+        "total_tokens": 4009,
+        "timestamp": 1762159194.7623239,
+        "operation_type": "code_assistant",
+        "project_id": "2ccf7c7d-119a-43a3-90b3-21c5c5a95adf",
+        "model": "claude-3-7-sonnet-20250219",
+        "cost_estimate": 0.022779
+      }
+    ],
+    "created_at": 1762159194.7623239
+  },
+  "51ad9e82-5623-42af-86fb-0d2be2e82b0d": {
+    "total_tokens": 7293,
+    "input_tokens": 3035,
+    "output_tokens": 4258,
+    "cost_estimate": 0.072975,
+    "operations": [
+      {
+        "input_tokens": 3035,
+        "output_tokens": 4258,
+        "total_tokens": 7293,
+        "timestamp": 1766905817.2933824,
+        "operation_type": "project_generation",
+        "project_id": "51ad9e82-5623-42af-86fb-0d2be2e82b0d",
+        "model": "claude-3-7-sonnet-20250219",
+        "cost_estimate": 0.072975
+      }
+    ],
+    "created_at": 1766905817.2933824
+  }
+}

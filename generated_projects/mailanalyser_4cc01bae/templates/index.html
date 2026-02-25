@@ -1,0 +1,481 @@
+{% extends "base.html" %}
+
+{% block title %}AI Mail Analyzer{% endblock %}
+
+{% block extra_css %}
+<style>
+    .email-list {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    .email-item {
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .email-item:hover {
+        background-color: #f8f9fa;
+    }
+    .email-item.selected {
+        background-color: #e9ecef;
+        border-left: 4px solid #0d6efd;
+    }
+    .email-preview {
+        color: #6c757d;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .analysis-result {
+        background-color: #f8f9fa;
+        border-left: 4px solid #0d6efd;
+        padding: 15px;
+        border-radius: 4px;
+    }
+    .loading-spinner {
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar with folders -->
+    <div class="col-md-3 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-folder me-2"></i>Folders</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush" id="folder-list">
+                    <a href="#" class="list-group-item list-group-item-action active" data-folder="INBOX">
+                        <i class="bi bi-inbox me-2"></i>Inbox
+                    </a>
+                    <div class="text-center p-3 loading-spinner" id="folders-loading">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Email list -->
+    <div class="col-md-9 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-envelope me-2"></i><span id="current-folder">Inbox</span></h5>
+                <button class="btn btn-sm btn-light" id="refresh-btn">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="email-list" id="email-list">
+                    <div class="text-center p-5 loading-spinner" id="emails-loading">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading emails...</p>
+                    </div>
+                    <div class="text-center p-5" id="no-emails" style="display: none;">
+                        <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                        <p class="mt-2">No emails found in this folder</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Email detail modal -->
+<div class="modal fade" id="emailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="email-subject">Email Subject</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <strong>From:</strong> <span id="email-from"></span><br>
+                    <strong>To:</strong> <span id="email-to"></span><br>
+                    <strong>Date:</strong> <span id="email-date"></span>
+                </div>
+                
+                <div class="mb-4">
+                    <h6>Email Content:</h6>
+                    <div class="p-3 bg-light rounded" id="email-body" style="white-space: pre-wrap;"></div>
+                </div>
+                
+                <div id="attachments-section" style="display: none;">
+                    <h6>Attachments:</h6>
+                    <ul class="list-group mb-4" id="email-attachments"></ul>
+                </div>
+                
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0"><i class="bi bi-robot me-2"></i>AI Analysis</h6>
+                    </div>
+                    <div class="card-body">
+                        <form id="analysis-form">
+                            <input type="hidden" id="email-id-input" name="email_id">
+                            <div class="mb-3">
+                                <label for="analysis-type" class="form-label">Analysis Type:</label>
+                                <select class="form-select" id="analysis-type" name="analysis_type">
+                                    <option value="summary">Summarize Email</option>
+                                    <option value="sentiment">Analyze Sentiment</option>
+                                    <option value="action_items">Extract Action Items</option>
+                                    <option value="key_points">Extract Key Points</option>
+                                    <option value="categorize">Categorize Email</option>
+                                    <option value="priority">Determine Priority</option>
+                                    <option value="comprehensive">Comprehensive Analysis</option>
+                                </select>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary" id="analyze-btn">
+                                    <i class="bi bi-magic me-2"></i>Analyze
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <div class="text-center my-4 loading-spinner" id="analysis-loading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Analyzing email...</p>
+                        </div>
+                        
+                        <div id="analysis-result-container" style="display: none;">
+                            <h6 class="mt-4 mb-2">
+                                <i class="bi bi-lightbulb me-2"></i>
+                                <span id="analysis-type-display">Analysis</span> Result:
+                            </h6>
+                            <div class="analysis-result" id="analysis-result"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // CSRF token for AJAX requests
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    
+    // DOM elements
+    const folderList = document.getElementById('folder-list');
+    const emailList = document.getElementById('email-list');
+    const currentFolderEl = document.getElementById('current-folder');
+    const refreshBtn = document.getElementById('refresh-btn');
+    const emailModal = new bootstrap.Modal(document.getElementById('emailModal'));
+    const analysisForm = document.getElementById('analysis-form');
+    
+    // Current state
+    let currentFolder = 'INBOX';
+    let currentEmailId = null;
+    
+    // Load folders
+    function loadFolders() {
+        document.getElementById('folders-loading').style.display = 'block';
+        
+        fetch('/folders')
+            .then(response => response.json())
+            .then(folders => {
+                // Keep the Inbox at the top
+                const inboxItem = folderList.querySelector('[data-folder="INBOX"]');
+                
+                // Add other folders
+                folders.forEach(folder => {
+                    if (folder !== 'INBOX') {
+                        const folderItem = document.createElement('a');
+                        folderItem.href = '#';
+                        folderItem.className = 'list-group-item list-group-item-action';
+                        folderItem.setAttribute('data-folder', folder);
+                        
+                        // Add appropriate icon based on folder name
+                        let icon = 'folder';
+                        if (folder.toLowerCase().includes('sent')) icon = 'send';
+                        if (folder.toLowerCase().includes('draft')) icon = 'file-earmark';
+                        if (folder.toLowerCase().includes('trash')) icon = 'trash';
+                        if (folder.toLowerCase().includes('spam') || folder.toLowerCase().includes('junk')) icon = 'exclamation-triangle';
+                        
+                        folderItem.innerHTML = `<i class="bi bi-${icon} me-2"></i>${folder}`;
+                        
+                        folderItem.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            selectFolder(folder);
+                        });
+                        
+                        folderList.appendChild(folderItem);
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error loading folders:', error);
+                alert('Failed to load email folders. Please try again.');
+            })
+            .finally(() => {
+                document.getElementById('folders-loading').style.display = 'none';
+            });
+    }
+    
+    // Load emails for a folder
+    function loadEmails(folder) {
+        // Clear current emails
+        while (emailList.firstChild) {
+            if (emailList.firstChild.id === 'emails-loading' || emailList.firstChild.id === 'no-emails') {
+                break;
+            }
+            emailList.removeChild(emailList.firstChild);
+        }
+        
+        document.getElementById('emails-loading').style.display = 'block';
+        document.getElementById('no-emails').style.display = 'none';
+        
+        fetch(`/fetch-emails?folder=${encodeURIComponent(folder)}&limit=20`)
+            .then(response => response.json())
+            .then(emails => {
+                if (emails.length === 0) {
+                    document.getElementById('no-emails').style.display = 'block';
+                    return;
+                }
+                
+                emails.forEach(email => {
+                    const emailItem = document.createElement('div');
+                    emailItem.className = 'email-item p-3 border-bottom';
+                    emailItem.setAttribute('data-email-id', email.id);
+                    
+                    // Format the email item
+                    emailItem.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <h6 class="mb-0 text-truncate" style="max-width: 70%;">${email.subject || '(No Subject)'}</h6>
+                            <small class="text-muted">${formatDate(email.date)}</small>
+                        </div>
+                        <div class="text-truncate small">${email.from}</div>
+                        <div class="email-preview small mt-1">${email.preview}</div>
+                        ${email.has_attachments ? '<div class="mt-1"><i class="bi bi-paperclip text-muted"></i> Attachments</div>' : ''}
+                    `;
+                    
+                    emailItem.addEventListener('click', () => {
+                        openEmail(email.id);
+                    });
+                    
+                    emailList.appendChild(emailItem);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading emails:', error);
+                alert('Failed to load emails. Please try again.');
+            })
+            .finally(() => {
+                document.getElementById('emails-loading').style.display = 'none';
+            });
+    }
+    
+    // Select a folder
+    function selectFolder(folder) {
+        // Update UI
+        currentFolder = folder;
+        currentFolderEl.textContent = folder;
+        
+        // Update active folder in sidebar
+        const folderItems = folderList.querySelectorAll('.list-group-item');
+        folderItems.forEach(item => {
+            item.classList.remove('active');
+            if (item.getAttribute('data-folder') === folder) {
+                item.classList.add('active');
+            }
+        });
+        
+        // Load emails for this folder
+        loadEmails(folder);
+    }
+    
+    // Open an email
+    function openEmail(emailId) {
+        currentEmailId = emailId;
+        
+        // Update selected email in list
+        const emailItems = emailList.querySelectorAll('.email-item');
+        emailItems.forEach(item => {
+            item.classList.remove('selected');
+            if (item.getAttribute('data-email-id') === emailId) {
+                item.classList.add('selected');
+            }
+        });
+        
+        // Reset analysis section
+        document.getElementById('analysis-result-container').style.display = 'none';
+        document.getElementById('analysis-loading').style.display = 'none';
+        document.getElementById('analyze-btn').disabled = false;
+        
+        // Set email ID in form
+        document.getElementById('email-id-input').value = emailId;
+        
+        // Fetch email content
+        fetch(`/analyze-email`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                email_id: emailId,
+                analysis_type: 'fetch_only'
+            })
+        })
+        .then(response => response.json())
+        .then(email => {
+            // Populate modal with email details
+            document.getElementById('email-subject').textContent = email.subject || '(No Subject)';
+            document.getElementById('email-from').textContent = email.from;
+            document.getElementById('email-to').textContent = email.to;
+            document.getElementById('email-date').textContent = email.date;
+            document.getElementById('email-body').textContent = email.body;
+            
+            // Handle attachments
+            const attachmentsSection = document.getElementById('attachments-section');
+            const attachmentsList = document.getElementById('email-attachments');
+            
+            if (email.attachments && email.attachments.length > 0) {
+                attachmentsList.innerHTML = '';
+                email.attachments.forEach(attachment => {
+                    const item = document.createElement('li');
+                    item.className = 'list-group-item d-flex justify-content-between align-items-center';
+                    item.innerHTML = `
+                        <div>
+                            <i class="bi bi-file-earmark me-2"></i>${attachment.filename}
+                        </div>
+                        <span class="badge bg-primary rounded-pill">${formatFileSize(attachment.size)}</span>
+                    `;
+                    attachmentsList.appendChild(item);
+                });
+                attachmentsSection.style.display = 'block';
+            } else {
+                attachmentsSection.style.display = 'none';
+            }
+            
+            // Show the modal
+            emailModal.show();
+        })
+        .catch(error => {
+            console.error('Error fetching email:', error);
+            alert('Failed to load email details. Please try again.');
+        });
+    }
+    
+    // Analyze email
+    function analyzeEmail(emailId, analysisType) {
+        document.getElementById('analysis-result-container').style.display = 'none';
+        document.getElementById('analysis-loading').style.display = 'block';
+        document.getElementById('analyze-btn').disabled = true;
+        
+        fetch('/analyze-email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                email_id: emailId,
+                analysis_type: analysisType
+            })
+        })
+        .then(response => response.json())
+        .then(result => {
+            // Display analysis result
+            document.getElementById('analysis-type-display').textContent = getAnalysisTypeDisplay(analysisType);
+            document.getElementById('analysis-result').textContent = result.result;
+            document.getElementById('analysis-result-container').style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Error analyzing email:', error);
+            alert('Failed to analyze email. Please try again.');
+        })
+        .finally(() => {
+            document.getElementById('analysis-loading').style.display = 'none';
+            document.getElementById('analyze-btn').disabled = false;
+        });
+    }
+    
+    // Helper function to format date
+    function formatDate(dateStr) {
+        const date = new Date(dateStr);
+        const now = new Date();
+        
+        // Check if valid date
+        if (isNaN(date.getTime())) {
+            return dateStr; // Return original string if invalid
+        }
+        
+        // Today's date
+        if (date.toDateString() === now.toDateString()) {
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        // This year
+        if (date.getFullYear() === now.getFullYear()) {
+            return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        }
+        
+        // Different year
+        return date.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    
+    // Helper function to format file size
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+    
+    // Helper function to get display name for analysis type
+    function getAnalysisTypeDisplay(type) {
+        const types = {
+            'summary': 'Summary',
+            'sentiment': 'Sentiment Analysis',
+            'action_items': 'Action Items',
+            'key_points': 'Key Points',
+            'categorize': 'Category',
+            'priority': 'Priority',
+            'comprehensive': 'Comprehensive Analysis'
+        };
+        return types[type] || 'Analysis';
+    }
+    
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', () => {
+        // Load folders
+        loadFolders();
+        
+        // Load initial emails
+        loadEmails(currentFolder);
+        
+        // Refresh button
+        refreshBtn.addEventListener('click', () => {
+            loadEmails(currentFolder);
+        });
+        
+        // Analysis form submission
+        analysisForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const emailId = document.getElementById('email-id-input').value;
+            const analysisType = document.getElementById('analysis-type').value;
+            analyzeEmail(emailId, analysisType);
+        });
+        
+        // Initial folder selection
+        const inboxItem = folderList.querySelector('[data-folder="INBOX"]');
+        inboxItem.addEventListener('click', (e) => {
+            e.preventDefault();
+            selectFolder('INBOX');
+        });
+    });
+</script>
+{% endblock %}

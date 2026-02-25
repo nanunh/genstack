@@ -1,0 +1,7 @@
+{
+  "project_id": "ab80ae8a-6c6e-4253-9edb-e55d8ed876a6",
+  "project_name": "hindu-calendar-app",
+  "created_at": "2025-10-18T16:04:47.646713",
+  "instructions": "To set up and run the Hindu Calendar application:\n\n1. Make sure you have Python 3.6+ installed on your system.\n\n2. Create a new directory for the project and navigate to it in your terminal.\n\n3. Create the file structure as shown in the project files.\n\n4. Install the required dependencies:\n   ```\n   pip install -r requirements.txt\n   ```\n\n5. Run the Flask application:\n   ```\n   python app.py\n   ```\n\n6. Open your web browser and navigate to:\n   ```\n   http://127.0.0.1:5000/\n   ```\n\n7. You should now see the Hindu Calendar application with the current month displayed. You can navigate between months using the \"Previous Month\" and \"Next Month\" buttons.\n\n8. Click on any day to see detailed Rahu Kalam and Yamakandam timings for that day.\n\nThe application uses traditional fixed time periods for Rahu Kalam and Yamakandam based on the day of the week. These timings are displayed for each day in the calendar.",
+  "file_count": 8
+}

@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - BabySitter Booking{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2 class="form-title">Login to Your Account</h2>
+    <form method="POST" action="{{ url_for('login') }}">
+        <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" name="email" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" class="form-control" required>
+        </div>
+        
+        <button type="submit" class="btn">Login</button>
+    </form>
+    
+    <div style="margin-top: 1.5rem; text-align: center;">
+        <p>Don't have an account? <a href="{{ url_for('register') }}">Register here</a></p>
+    </div>
+</div>
+{% endblock %}

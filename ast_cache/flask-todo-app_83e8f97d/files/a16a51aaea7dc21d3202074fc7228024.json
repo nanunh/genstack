@@ -1,0 +1,15 @@
+{
+  "file_path": "static/css/style.css",
+  "language": "css",
+  "file_hash": "9d3d74d1c8b26ed97c67359f31b403f3",
+  "last_modified": 1760716024.899019,
+  "last_parsed": 1760716024.8990195,
+  "functions": [],
+  "classes": [],
+  "imports": [],
+  "variables": [],
+  "total_lines": 144,
+  "complexity_score": 0,
+  "has_syntax_errors": false,
+  "parser_type": "regex"
+}

@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}BabySitter Booking - Find Trusted Sitters{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="container">
+        <h1>Find Trusted Babysitters in Your Area</h1>
+        <p>Connect with experienced sitters who can provide quality care for your children when you need it most.</p>
+        {% if not current_user.is_authenticated %}
+            <div>
+                <a href="{{ url_for('register') }}" class="btn">Get Started</a>
+                <a href="{{ url_for('login') }}" class="btn btn-secondary">Login</a>
+            </div>
+        {% else %}
+            {% if current_user.user_type == 'parent' %}
+                <a href="{{ url_for('parent_dashboard') }}" class="btn">Go to Dashboard</a>
+            {% else %}
+                <a href="{{ url_for('sitter_dashboard') }}" class="btn">Go to Dashboard</a>
+            {% endif %}
+        {% endif %}
+    </div>
+</section>
+
+<section class="container">
+    <div style="margin: 3rem 0; text-align: center;">
+        <h2 style="color: #4a6fa5; margin-bottom: 1.5rem;">How It Works</h2>
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-around; gap: 2rem;">
+            <div class="card" style="flex: 1; min-width: 250px; text-align: center;">
+                <h3 class="card-title">For Parents</h3>
+                <div class="card-body">
+                    <p>1. Create an account</p>
+                    <p>2. Browse available sitters</p>
+                    <p>3. Book a sitter for your needs</p>
+                    <p>4. Review your experience</p>
+                </div>
+                {% if not current_user.is_authenticated %}
+                    <a href="{{ url_for('register') }}" class="btn">Register as Parent</a>
+                {% endif %}
+            </div>
+            
+            <div class="card" style="flex: 1; min-width: 250px; text-align: center;">
+                <h3 class="card-title">For Sitters</h3>
+                <div class="card-body">
+                    <p>1. Create your profile</p>
+                    <p>2. Set your availability</p>
+                    <p>3. Accept booking requests</p>
+                    <p>4. Provide quality care</p>
+                </div>
+                {% if not current_user.is_authenticated %}
+                    <a href="{{ url_for('register') }}" class="btn">Register as Sitter</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<section style="background-color: #f0f4f8; padding: 3rem 0;">
+    <div class="container">
+        <h2 style="color: #4a6fa5; margin-bottom: 1.5rem; text-align: center;">Why Choose Us</h2>
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-around; gap: 2rem;">
+            <div class="card" style="flex: 1; min-width: 250px;">
+                <h3 class="card-title">Trusted Sitters</h3>
+                <p>All our sitters are carefully vetted and reviewed by parents in your community.</p>
+            </div>
+            
+            <div class="card" style="flex: 1; min-width: 250px;">
+                <h3 class="card-title">Easy Booking</h3>
+                <p>Our simple booking system makes it easy to find and schedule childcare when you need it.</p>
+            </div>
+            
+            <div class="card" style="flex: 1; min-width: 250px;">
+                <h3 class="card-title">Secure Platform</h3>
+                <p>Your privacy and security are our top priorities with our secure booking platform.</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

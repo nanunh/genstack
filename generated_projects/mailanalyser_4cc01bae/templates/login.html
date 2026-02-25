@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Login - AI Mail Analyzer{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0"><i class="bi bi-envelope-fill me-2"></i>Email Login</h3>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Connect to your email account to start analyzing your emails.</p>
+                
+                <form method="POST" action="{{ url_for('login') }}">
+                    {{ form.csrf_token }}
+                    
+                    <div class="mb-3">
+                        {{ form.email.label(class="form-label") }}
+                        {{ form.email(class="form-control", placeholder="your.email@example.com") }}
+                        {% if form.email.errors %}
+                            <div class="text-danger">
+                                {% for error in form.email.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.password.label(class="form-label") }}
+                        {{ form.password(class="form-control") }}
+                        {% if form.password.errors %}
+                            <div class="text-danger">
+                                {% for error in form.password.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            {{ form.server.label(class="form-label") }}
+                            {{ form.server(class="form-control") }}
+                            {% if form.server.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.server.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.port.label(class="form-label") }}
+                            {{ form.port(class="form-control") }}
+                            {% if form.port.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.port.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>Login
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer">
+                <div class="alert alert-info mb-0">
+                    <h5><i class="bi bi-info-circle me-2"></i>Important Notes:</h5>
+                    <ul class="mb-0">
+                        <li>For Gmail, use <code>imap.gmail.com</code> and port <code>993</code></li>
+                        <li>You may need to enable "Less secure app access" or create an app password</li>
+                        <li>Your credentials are only used to connect to your email server and are not stored permanently</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

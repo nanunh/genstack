@@ -1,0 +1,7 @@
+{
+  "project_id": "e1a04999-5639-4c87-9d16-d7771895c215",
+  "project_name": "babysitter-booking-app",
+  "created_at": "2025-10-15T08:07:29.811532",
+  "instructions": "To set up and run the BabySitter Booking application:\n\n1. Create a virtual environment:\n   ```\n   python -m venv venv\n   ```\n\n2. Activate the virtual environment:\n   - Windows: `venv\\Scripts\\activate`\n   - macOS/Linux: `source venv/bin/activate`\n\n3. Install the required dependencies:\n   ```\n   pip install -r requirements.txt\n   ```\n\n4. Run the application:\n   ```\n   python app.py\n   ```\n\n5. Open your browser and navigate to http://localhost:5000\n\n6. You can register as either a parent or a sitter:\n   - Parents can browse sitters, book appointments, and leave reviews\n   - Sitters can create profiles, set rates, and accept/decline bookings\n\nThe application uses SQLite for the database, which will be created automatically when you first run the app.",
+  "file_count": 14
+}

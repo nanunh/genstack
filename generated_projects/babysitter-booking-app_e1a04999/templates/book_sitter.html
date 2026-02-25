@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}Book {{ sitter.name }} - BabySitter Booking{% endblock %}
+
+{% block content %}
+<div style="margin: 2rem 0;">
+    <a href="{{ url_for('view_sitter', sitter_id=sitter.id) }}" style="text-decoration: none; color: #4a6fa5;">&larr; Back to Sitter Profile</a>
+</div>
+
+<div class="form-container">
+    <h2 class="form-title">Book {{ sitter.name }}</h2>
+    
+    {% if sitter.sitter_profile and sitter.sitter_profile.hourly_rate %}
+        <p style="text-align: center; margin-bottom: 1.5rem;">
+            <span style="font-weight: bold; color: #4a6fa5; font-size: 1.2rem;">${{ sitter.sitter_profile.hourly_rate }}</span>/hour
+        </p>
+    {% endif %}
+    
+    {% if sitter.sitter_profile and sitter.sitter_profile.availability %}
+        <div style="margin-bottom: 1.5rem; padding: 1rem; background-color: #f8f9fa; border-radius: 4px;">
+            <h3 style="color: #4a6fa5; margin-bottom: 0.5rem;">Availability</h3>
+            <p>{{ sitter.sitter_profile.availability }}</p>
+        </div>
+    {% endif %}
+    
+    <form method="POST" action="{{ url_for('book_sitter', sitter_id=sitter.id) }}">
+        <div class="form-group">
+            <label for="start_time">Start Date & Time</label>
+            <input type="datetime-local" id="start_time" name="start_time" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="end_time">End Date & Time</label>
+            <input type="datetime-local" id="end_time" name="end_time" class="form-control" required>
+        </div>
+        
+        <div id="price-estimate" style="margin: 1.5rem 0; padding: 1rem; background-color: #f8f9fa; border-radius: 4px; display: none;">
+            <h3 style="color: #4a6fa5; margin-bottom: 0.5rem;">Estimated Price</h3>
+            <p>Duration: <span id="duration">0</span> hours</p>
+            <p>Total: $<span id="total-price">0.00</span></p>
+        </div>
+        
+        <button type="submit" class="btn">Request Booking</button>
+    </form>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const startTimeInput = document.getElementById('start_time');
+        const endTimeInput = document.getElementById('end_time');
+        const priceEstimate = document.getElementById('price-estimate');
+        const durationSpan = document.getElementById('duration');
+        const totalPriceSpan = document.getElementById('total-price');
+        
+        {% if sitter.sitter_profile and sitter.sitter_profile.hourly_rate %}
+            const hourlyRate = {{ sitter.sitter_profile.hourly_rate }};
+        {% else %}
+            const hourlyRate = 0;
+        {% endif %}
+        
+        function updatePriceEstimate() {
+            const startTime = new Date(startTimeInput.value);
+            const endTime = new Date(endTimeInput.value);
+            
+            if (startTime && endTime && endTime > startTime) {
+                const durationMs = endTime - startTime;
+                const durationHours = durationMs / (1000 * 60 * 60);
+                const totalPrice = durationHours * hourlyRate;
+                
+                durationSpan.textContent = durationHours.toFixed(1);
+                totalPriceSpan.textContent = totalPrice.toFixed(2);
+                priceEstimate.style.display = 'block';
+            } else {
+                priceEstimate.style.display = 'none';
+            }
+        }
+        
+        startTimeInput.addEventListener('change', updatePriceEstimate);
+        endTimeInput.addEventListener('change', updatePriceEstimate);
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Merger - Merge Multiple PDFs</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📄 PDF Merger</h1>
+            <p class="subtitle">Upload multiple PDF files and merge them into one</p>
+        </header>
+
+        <main>
+            <div class="upload-section" id="uploadSection">
+                <div class="upload-area" id="uploadArea">
+                    <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <h2>Drop PDF files here</h2>
+                    <p>or click to browse</p>
+                    <input type="file" id="fileInput" multiple accept=".pdf" hidden>
+                    <button class="btn btn-primary" id="browseBtn">Browse Files</button>
+                </div>
+            </div>
+
+            <div class="files-section" id="filesSection" style="display: none;">
+                <div class="section-header">
+                    <h3>Selected Files (<span id="fileCount">0</span>)</h3>
+                    <button class="btn btn-secondary" id="clearBtn">Clear All</button>
+                </div>
+                <div class="files-list" id="filesList"></div>
+                <div class="action-buttons">
+                    <button class="btn btn-primary btn-large" id="mergeBtn" disabled>
+                        <span class="btn-text">Merge PDFs</span>
+                        <span class="btn-loader" style="display: none;"></span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="result-section" id="resultSection" style="display: none;">
+                <div class="success-message">
+                    <svg class="success-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h3>PDFs Merged Successfully!</h3>
+                    <p>Your merged PDF is ready to download</p>
+                    <button class="btn btn-success btn-large" id="downloadBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download Merged PDF
+                    </button>
+                    <button class="btn btn-secondary" id="newMergeBtn">Merge More PDFs</button>
+                </div>
+            </div>
+
+            <div class="error-section" id="errorSection" style="display: none;">
+                <div class="error-message">
+                    <svg class="error-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h3>Error</h3>
+                    <p id="errorMessage"></p>
+                    <button class="btn btn-primary" id="retryBtn">Try Again</button>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Supports PDF files up to 50MB each</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

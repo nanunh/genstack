@@ -1,0 +1,20 @@
+{
+  "src/pages/Login.jsx": {
+    "file_hash": "7aa2751146ef9381123adb52a121ad06",
+    "last_parsed": 1761214394.9618828,
+    "cache_filename": "f61c03baf10177fe7778e1c945cfa99b.json",
+    "language": "javascript"
+  },
+  "src/pages/Signup.jsx": {
+    "file_hash": "18a378382a5aa2bf7be07aae62012549",
+    "last_parsed": 1761214401.2368653,
+    "cache_filename": "ff63c0711c230804301d0a592eec2294.json",
+    "language": "javascript"
+  },
+  "src/pages/Dashboard.jsx": {
+    "file_hash": "444087cf3e7b507a23f0b022d6d97f79",
+    "last_parsed": 1761207050.1486318,
+    "cache_filename": "c5478bb5805a0f7736f058bb79d22cff.json",
+    "language": "javascript"
+  }
+}

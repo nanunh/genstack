@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FullStack - AI-Powered Project Generator</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand" onclick="goHome()" style="cursor: pointer;">
+                <span class="brand-icon">🚀</span>
+                <span class="brand-name">FullStack</span>
+            </div>
+            <div class="nav-actions">
+                <button class="nav-btn token-dashboard-btn">
+                    <span>📊</span> Token Usage
+                </button>
+                <button class="nav-btn project-history-btn">
+                    <span>📜</span> Project History
+                </button>
+                <button onclick="logout()" style="position: absolute; top: 20px; right: 20px; padding: 10px 20px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s ease; display: flex; align-items: center; gap: 8px;">
+                    <span>🚪</span>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="page-wrapper">
+        <!-- Left Sidebar - Projects -->
+        <aside class="projects-sidebar" id="projectsSidebar" style="display: none;">
+            <div class="sidebar-header">
+                <div class="your-project">
+                    <div class="your-project-back">
+                        <h2 class="sidebar-title">Your Projects</h2>
+                    </div>
+                    <div class="your-project-search">
+                        <div class="sidebar-search">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" id="searchProjects" class="search-input" placeholder="Search projects...">
+                        </div>
+                        <button id="refreshBtn" class="btn-icon-only" title="Refresh">
+                            <span>🔄</span>
+                        </button>
+                    </div>
+                </div>
+            
+                <div id="projects" class="projects-list"></div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="main-container">
+            <div class="content-wrapper">
+                <!-- Main Content -->
+                <main class="main-content">
+                    <!-- Generator Section -->
+                    <section class="generator-section card" id="generatorSection">
+                        <div class="card-header">
+                            <h2 class="section-title">Create Your Project</h2>
+                            <p class="section-subtitle">Choose your preferred method to generate your project</p>
+                        </div>
+
+                        <!-- Input Mode Selector -->
+                        <div class="input-mode-selector">
+                            <button type="button" id="textModeBtn" class="mode-btn active">
+                                <span class="mode-icon">📝</span>
+                                <span class="mode-text">Text Description</span>
+                            </button>
+                            <button type="button" id="fileModeBtn" class="mode-btn">
+                                <span class="mode-icon">📁</span>
+                                <span class="mode-text">Upload Files</span>
+                            </button>
+                        </div>
+
+                        <!-- Text Input Form -->
+                        <form id="textForm" class="project-form" style="display: block;">
+                            <div class="form-group">
+                                <label for="prompt" class="form-label">
+                                    <span class="label-icon">💡</span>
+                                    Project Description
+                                </label>
+                                <textarea 
+                                    id="prompt" 
+                                    name="prompt" 
+                                    class="form-input textarea-input"
+                                    placeholder="Describe your project in detail... e.g., Create a Flask REST API for a blog with user authentication and PostgreSQL database"
+                                    rows="5"
+                                    required
+                                ></textarea>
+                                <span class="form-hint">Be specific about technologies, features, and requirements</span>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="project_name" class="form-label">
+                                    <span class="label-icon">🏷️</span>
+                                    Project Name (Optional)
+                                </label>
+                                <input 
+                                    type="text" 
+                                    id="project_name" 
+                                    name="project_name" 
+                                    class="form-input"
+                                    placeholder="my-awesome-project"
+                                />
+                            </div>
+                            
+                            <button type="submit" id="generateTextBtn" class="btn btn-primary btn-large">
+                                <span class="btn-icon">✨</span>
+                                Generate Project
+                            </button>
+                        </form>
+
+                        <!-- File Upload Form -->
+                        <form id="fileForm" class="project-form" style="display: none;" enctype="multipart/form-data">
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <span class="label-icon">📂</span>
+                                    Upload Project Files
+                                </label>
+                                <div class="file-drop-zone" id="fileDropZone">
+                                    <div class="drop-zone-content">
+                                        <div class="upload-icon">📁</div>
+                                        <h3>Drag & Drop Files Here</h3>
+                                        <p>or click to browse your files</p>
+                                        <p class="file-hint">Supports: .py, .js, .html, .css, .json, .md, .txt, .zip and more</p>
+                                        <input type="file" id="files" name="files" multiple accept="*/*" style="display: none;">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="fileList" class="file-list" style="display: none;">
+                                <h4 class="file-list-title">Selected Files</h4>
+                                <div id="fileItems" class="file-items"></div>
+                                <button type="button" id="clearFiles" class="btn btn-secondary btn-small">
+                                    Clear All
+                                </button>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="analysisPrompt" class="form-label">
+                                    <span class="label-icon">🔍</span>
+                                    Analysis Instructions
+                                </label>
+                                <textarea 
+                                    id="analysisPrompt" 
+                                    name="analysis_prompt" 
+                                    class="form-input textarea-input"
+                                    placeholder="Tell the AI how to analyze and improve your project... e.g., Add error handling, update dependencies, improve code structure"
+                                    rows="4"
+                                ></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="project_name_files" class="form-label">
+                                    <span class="label-icon">🏷️</span>
+                                    Project Name (Optional)
+                                </label>
+                                <input 
+                                    type="text" 
+                                    id="project_name_files" 
+                                    name="project_name" 
+                                    class="form-input"
+                                    placeholder="improved-project"
+                                />
+                            </div>
+
+                            <button type="submit" id="generateFilesBtn" class="btn btn-primary btn-large">
+                                <span class="btn-icon">🔄</span>
+                                Analyze & Generate
+                            </button>
+                        </form>
+                        
+                        <!-- Loading State -->
+                        <div class="loading" id="loading">
+                            <div class="spinner"></div>
+                            <p class="loading-text">Generating your project... This may take a moment.</p>
+                        </div>
+                        
+                        <!-- Result -->
+                        <div class="result" id="result"></div>
+                    </section>
+
+                    <section id="codeAssistantSection" class="code-assistant-full-section" style="display: none;">
+                        <div class="code-assistant-container">
+                            <!-- Header with Back Button -->
+                            <div class="code-assistant-header">
+                                <button id="backToHomeBtn" class="back-to-home-btn">
+                                    ← Back to Home
+                                </button>
+                                <h2>🤖 Project Code Assistant</h2>
+                                <div class="project-info-badge">
+                                    <span id="currentProjectName">Project Name</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Code Assistant Content -->
+                            <div class="code-assistant-body">
+                                <!-- Welcome Message Area -->
+                                <div id="codeAssistantMessages" class="code-assistant-messages">
+                                    <div class="welcome-message-full">
+                                        <!-- Quick Action Tips -->
+                                        <div class="quick-tips-section">
+                                            <p>💡 <strong>Quick suggestions:</strong></p>
+                                            <div class="quick-tips-grid">
+                                                <button class="quick-tip-btn">"Add a login form"</button>
+                                                <button class="quick-tip-btn">"Fix the bug in authentication"</button>
+                                                <button class="quick-tip-btn">"Delete the old contact page"</button>
+                                                <button class="quick-tip-btn">"Explain how this component works"</button>
+                                                <button class="quick-tip-btn">"Add dark mode feature"</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Chat Input Area -->
+                                <div class="code-assistant-input-area">
+                                    <textarea 
+                                        id="codeAssistantInput" 
+                                        placeholder="Describe what you want to modify in your project..."
+                                        rows="3"
+                                    ></textarea>
+                                    <button id="sendCodeAssistantBtn" class="send-assistant-btn" disabled>
+                                        Send Message
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <!-- Code Modification Panel -->
+    <div id="codeModificationPanel" class="code-mod-panel" style="display: none;">
+        <div class="panel-header">
+            <h3 class="panel-title">
+                <span class="panel-icon">🤖</span>
+                Project Code Assistant
+            </h3>
+            <div class="panel-controls">
+                <button id="togglePanelSize" class="panel-btn" title="Toggle Size">⛶</button>
+                <button id="closePanelBtn" class="panel-btn" title="Close">✕</button>
+            </div>
+        </div>
+        
+        <div class="panel-content">
+            <!-- File Analysis -->
+            <div id="fileAnalysis" class="file-analysis" style="display: none !important;">
+                <h4 class="analysis-title">📊 Project Overview</h4>
+                <div id="fileAnalysisContent"></div>
+            </div>
+            
+            <!-- Chat Interface -->
+            <div class="chat-container">
+                <div id="chatMessages" class="chat-messages">
+                    <div class="welcome-message">
+                        <h3>👋 Welcome to Your Code Assistant!</h3>
+                        <p>I can help you with:</p>
+                        <ul>
+                            <li>Adding new features and functions</li>
+                            <li>Fixing bugs and improving code quality</li>
+                            <li>Refactoring code structure</li>
+                            <li>Adding error handling and validation</li>
+                            <li>Updating dependencies</li>
+                        </ul>
+                        <p class="welcome-footer">Describe what you'd like to change in your project!</p>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <button class="quick-btn" data-action="add_function">
+                        <span>➕</span> Add Function
+                    </button>
+                    <button class="quick-btn" data-action="fix_bug">
+                        <span>🐛</span> Fix Bug
+                    </button>
+                    <button class="quick-btn" data-action="add_feature">
+                        <span>⚡</span> Add Feature
+                    </button>
+                    <button class="quick-btn" data-action="refactor">
+                        <span>🔄</span> Refactor
+                    </button>
+                </div>
+                
+                <!-- Chat Input -->
+                <div class="chat-input-container">
+                    <textarea 
+                        id="chatInput" 
+                        class="chat-input"
+                        placeholder="Describe what you want to modify..."
+                        rows="3"
+                    ></textarea>
+                    <button id="sendChatBtn" class="send-btn" disabled>
+                        <span>📤</span> Send
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p class="footer-text">© 2024 FullStack. Powered by Kochadai Technologies.</p>
+        </div>
+    </footer>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

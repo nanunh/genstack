@@ -1,0 +1,15 @@
+{
+  "file_path": "templates/reservation.html",
+  "language": "html",
+  "file_hash": "187a8257596dcbec4ce382866588f89b",
+  "last_modified": 1761147842.8138433,
+  "last_parsed": 1761147842.8138437,
+  "functions": [],
+  "classes": [],
+  "imports": [],
+  "variables": [],
+  "total_lines": 31,
+  "complexity_score": 0,
+  "has_syntax_errors": false,
+  "parser_type": "regex"
+}

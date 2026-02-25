@@ -1,0 +1,7 @@
+flask==2.3.3
+flask-sqlalchemy==3.1.1
+flask-login==0.6.2
+flask-wtf==1.2.1
+WTForms==3.0.1
+email-validator==2.0.0.post2
+werkzeug==2.3.7

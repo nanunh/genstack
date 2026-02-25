@@ -1,0 +1,15 @@
+{
+  "file_path": "requirements.txt",
+  "language": "text",
+  "file_hash": "2b985b58171608383b5e5f395186aa55",
+  "last_modified": 1762159146.5999284,
+  "last_parsed": 1762159146.5999289,
+  "functions": [],
+  "classes": [],
+  "imports": [],
+  "variables": [],
+  "total_lines": 14,
+  "complexity_score": 0,
+  "has_syntax_errors": false,
+  "parser_type": "generic"
+}

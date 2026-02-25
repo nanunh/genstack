@@ -1,0 +1,15 @@
+{
+  "file_path": "templates/index.html",
+  "language": "html",
+  "file_hash": "3b1e7f1d36e12f306e50a5e4bff4aff7",
+  "last_modified": 1761147844.6360648,
+  "last_parsed": 1761147844.6360652,
+  "functions": [],
+  "classes": [],
+  "imports": [],
+  "variables": [],
+  "total_lines": 116,
+  "complexity_score": 0,
+  "has_syntax_errors": false,
+  "parser_type": "regex"
+}

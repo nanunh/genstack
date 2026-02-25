@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Profile - BabySitter Booking{% endblock %}
+
+{% block content %}
+<div class="form-container" style="max-width: 700px;">
+    <h2 class="form-title">Edit Your Sitter Profile</h2>
+    <form method="POST" action="{{ url_for('sitter_profile') }}">
+        <div class="form-group">
+            <label for="bio">Bio</label>
+            <textarea id="bio" name="bio" class="form-control" rows="4">{{ profile.bio or '' }}</textarea>
+            <small style="color: #666;">Tell parents about yourself and why you're a great sitter.</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="experience">Experience</label>
+            <textarea id="experience" name="experience" class="form-control" rows="4">{{ profile.experience or '' }}</textarea>
+            <small style="color: #666;">Describe your childcare experience, certifications, and qualifications.</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="hourly_rate">Hourly Rate ($)</label>
+            <input type="number" id="hourly_rate" name="hourly_rate" class="form-control" step="0.01" min="0" value="{{ profile.hourly_rate or '' }}">
+        </div>
+        
+        <div class="form-group">
+            <label for="availability">Availability</label>
+            <textarea id="availability" name="availability" class="form-control" rows="4">{{ profile.availability or '' }}</textarea>
+            <small style="color: #666;">Describe your general availability (e.g., weekdays after 5pm, weekends, etc.)</small>
+        </div>
+        
+        <button type="submit" class="btn">Save Profile</button>
+    </form>
+</div>
+{% endblock %}
