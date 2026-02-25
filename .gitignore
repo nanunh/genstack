@@ -62,6 +62,12 @@ desktop.ini
 *.swo
 *~
 
+# Test artifacts
+.pytest_cache/
+.benchmarks/
+htmlcov/
+.coverage
+
 # Temporary files
 tmp/
 temp/
