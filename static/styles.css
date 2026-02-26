@@ -714,6 +714,106 @@ body::before {
 }
 
 /* ===========================
+   Project Action Buttons (Run / Deploy / Code Assistant)
+   =========================== */
+.project-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-lg);
+}
+
+.run-btn,
+.deploy-btn,
+.code-assistant-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.25rem;
+    border: none;
+    border-radius: var(--radius-lg);
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Run Project — green */
+.run-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+.run-btn:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+}
+.run-btn:active { transform: translateY(0); }
+
+/* Stop state */
+.run-btn.stop-btn {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+}
+.run-btn.stop-btn:hover {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    box-shadow: 0 6px 18px rgba(239, 68, 68, 0.45);
+}
+
+/* Deploy Server — purple */
+.deploy-btn {
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+}
+.deploy-btn:hover {
+    background: linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(109, 40, 217, 0.45);
+}
+.deploy-btn:active { transform: translateY(0); }
+
+/* Code Assistant — blue */
+.code-assistant-btn {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+}
+.code-assistant-btn:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
+}
+.code-assistant-btn:active { transform: translateY(0); }
+
+/* Disabled state */
+.run-btn:disabled,
+.deploy-btn:disabled,
+.code-assistant-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none;
+}
+
+@media (max-width: 480px) {
+    .project-actions {
+        flex-direction: column;
+    }
+    .run-btn,
+    .deploy-btn,
+    .code-assistant-btn {
+        width: 100%;
+    }
+}
+
+/* ===========================
    PROJECT HISTORY VIEW - COMPLETE STYLES
    =========================== */
 

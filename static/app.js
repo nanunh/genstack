@@ -971,18 +971,18 @@ const UI = {
                 </div>
                 <p><strong>Location:</strong> generated_projects/${data.project_name}_${data.project_id.slice(0, 8)}/</p>
                 
-                <div class="project-actions" style="margin-top: 20px;">
-                    <button id="toggleRunBtn-${data.project_id}" 
-                            class="run-btn" 
+                <div class="project-actions">
+                    <button id="toggleRunBtn-${data.project_id}"
+                            class="run-btn"
                             onclick="ProjectManager.toggleProjectRun('${data.project_id}')"
                             data-state="stopped">
-                        Run Project
+                        ▶ Run Project
                     </button>
                     <button id="deployBtn-${data.project_id}" onclick="ProjectManager.deployProject('${data.project_id}')" class="deploy-btn">
-                        Deploy Server
+                        🚀 Deploy Server
                     </button>
                     <button onclick="ProjectManager.openCodeAssistant('${data.project_id}')" class="code-assistant-btn">
-                        Code Assistant
+                        🤖 Code Assistant
                     </button>
                     <div id="projectStatus-${data.project_id}" class="project-status" style="display: none;"></div>
                 </div>
@@ -1065,23 +1065,23 @@ const UI = {
                             View Details
                         </button>
                         
-                        <button id="toggleRunBtn-${project.project_id}" 
-                                class="run-btn" 
+                        <button id="toggleRunBtn-${project.project_id}"
+                                class="run-btn"
                                 onclick="ProjectManager.toggleProjectRun('${project.project_id}')"
                                 data-state="stopped"
                                 title="Run/Stop this project">
-                            Run Project
+                            ▶ Run Project
                         </button>
-                        
-                        <button id="deployBtn-${project.project_id}" 
-                                onclick="ProjectManager.deployProject('${project.project_id}')" 
+
+                        <button id="deployBtn-${project.project_id}"
+                                onclick="ProjectManager.deployProject('${project.project_id}')"
                                 class="deploy-btn" title="Deploy this project to server">
-                            Deploy Server
+                            🚀 Deploy Server
                         </button>
-                        
-                        <button onclick="ProjectManager.openCodeAssistant('${project.project_id}')" 
+
+                        <button onclick="ProjectManager.openCodeAssistant('${project.project_id}')"
                                 class="code-assistant-btn" title="Open Code Assistant for this project">
-                            Code Assistant
+                            🤖 Code Assistant
                         </button>
                         
                         <button onclick="TokenUI.showTokenModal('${project.project_id}', '${project.project_name}')" 
