@@ -1,4 +1,4 @@
-# StackGPT — AI-Powered Full-Stack Project Generator
+# StackGPT - AI-Powered Full-Stack Project Generator
 
 StackGPT is an open-source web application that generates complete, production-ready full-stack projects from a single text prompt. Powered by Claude (Anthropic), it uses MCP (Model Context Protocol) tool integration to intelligently create, modify, and deploy multi-language codebases.
 
