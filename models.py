@@ -14,6 +14,15 @@ class LoginRequest(BaseModel):
     remember: bool = False
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
 class ProjectRequest(BaseModel):
     prompt: Optional[str] = None
     project_name: Optional[str] = None

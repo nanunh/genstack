@@ -5,23 +5,46 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginForm) {
         loginForm.addEventListener('submit', handleLogin);
     }
-    
+
     // Signup Form Handler
     const signupForm = document.getElementById('signupForm');
     if (signupForm) {
         signupForm.addEventListener('submit', handleSignup);
-        
+
         // Password strength checker
         const passwordInput = document.getElementById('password');
         if (passwordInput) {
             passwordInput.addEventListener('input', checkPasswordStrength);
         }
     }
-    
-    // Social login buttons
-    document.querySelectorAll('.btn-social').forEach(btn => {
-        btn.addEventListener('click', handleSocialLogin);
-    });
+
+    // Forgot Password Modal
+    const forgotLink = document.getElementById('forgotPasswordLink');
+    const modal = document.getElementById('forgotPasswordModal');
+    const closeModal = document.getElementById('closeModal');
+    const forgotForm = document.getElementById('forgotPasswordForm');
+
+    if (forgotLink && modal) {
+        forgotLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            modal.style.display = 'flex';
+        });
+
+        closeModal.addEventListener('click', () => {
+            modal.style.display = 'none';
+            document.getElementById('forgotError').style.display = 'none';
+            document.getElementById('forgotSuccess').style.display = 'none';
+            document.getElementById('forgotEmail').value = '';
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        forgotForm.addEventListener('submit', handleForgotPassword);
+    }
 });
 
 // Login Handler
@@ -193,15 +216,45 @@ function togglePassword(event) {
     }
 }
 
-// Social Login Handler
-function handleSocialLogin(e) {
-    const provider = e.currentTarget.classList.contains('google-btn') ? 'google' : 'github';
-    
-    // TODO: Implement OAuth flow
-    console.log(`Signing in with ${provider}`);
-    
-    // For now, just show alert
-    alert(`${provider.charAt(0).toUpperCase() + provider.slice(1)} login will be implemented soon!`);
+// Forgot Password Handler
+async function handleForgotPassword(e) {
+    e.preventDefault();
+
+    const btn = document.getElementById('forgotBtn');
+    const errorMsg = document.getElementById('forgotError');
+    const successMsg = document.getElementById('forgotSuccess');
+    const email = document.getElementById('forgotEmail').value.trim();
+
+    errorMsg.style.display = 'none';
+    successMsg.style.display = 'none';
+
+    btn.disabled = true;
+    btn.innerHTML = '<span>Sending...</span>';
+
+    try {
+        const response = await fetch('/api/auth/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || 'Failed to send reset link');
+        }
+
+        successMsg.textContent = data.message || 'If that email is registered, a reset link has been sent.';
+        successMsg.style.display = 'block';
+        document.getElementById('forgotEmail').value = '';
+
+    } catch (error) {
+        errorMsg.textContent = error.message || 'Something went wrong. Please try again.';
+        errorMsg.style.display = 'block';
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>Send Reset Link</span><span class="btn-arrow">→</span>';
+    }
 }
 
 // Check if user is already logged in
