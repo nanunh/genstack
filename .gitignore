@@ -72,3 +72,26 @@ htmlcov/
 tmp/
 temp/
 *.tmp
+*.bak
+
+# Testing / Coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.cover
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Flask instance folder
+instance/
+
+# Node (if frontend is added)
+node_modules/
+
+# Process & socket files
+*.pid
+*.sock
