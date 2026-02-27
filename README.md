@@ -12,11 +12,11 @@ If you find this project useful, consider supporting it!
 
 Scan the QR code below to donate via **UPI**:
 
-<img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=upi%3A%2F%2Fpay%3Fpa%3D87789902020a%40kotak" alt="Donate via UPI" width="220"/>
+<img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=upi%3A%2F%2Fpay%3Fpa%3D8778990202a%40kotak" alt="Donate via UPI" width="220"/>
 
 <br>
 
-**UPI ID:** `87789902020a@kotak`
+**UPI ID:** `8778990202a@kotak`
 
 </details>
 
