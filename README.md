@@ -22,6 +22,23 @@ Scan the QR code below to donate via **UPI**:
 
 ---
 
+## Quick Start (TL;DR)
+
+```bash
+git clone https://github.com/nanunh/genstack.git
+cd genstack
+python3 -m venv venv && source venv/bin/activate   # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env                               # fill in your API key + DB details
+python3 generate_keys.py                           # generates SSL certificates
+python3 server.py                                  # starts the server
+```
+
+Then open **https://localhost:8000** in your browser.
+> On first visit you will see a browser security warning — click **Advanced → Proceed to localhost**. This is expected for self-signed certificates.
+
+---
+
 ## Features
 
 - **Prompt-to-Project** — Describe your app in plain English and get a complete project with all files generated
@@ -112,7 +129,41 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4. Configure environment variables
+### 4. Generate SSL Certificates
+
+StackGPT runs over **HTTPS** and requires SSL certificate files in the `keys/` folder.
+Run the included key generator to create self-signed certificates for local development:
+
+```bash
+python3 generate_keys.py
+```
+
+**What this does:**
+- Generates an RSA 4096-bit private key → `keys/privkey.pem`
+- Generates a self-signed X.509 certificate → `keys/fullchain.pem`
+- Valid for 825 days (~2 years)
+- Covers `localhost`, `127.0.0.1`, and `::1`
+
+**Expected output:**
+```
+✅ SSL keys generated successfully!
+  Private key : keys/privkey.pem
+  Certificate : keys/fullchain.pem
+  Valid until : 2028-06-01
+```
+
+> **Browser warning:** Self-signed certificates will trigger a security warning in your browser.
+> Click **Advanced → Proceed to localhost (unsafe)** to continue. This is safe for local development.
+
+> **Production use:** Replace `keys/privkey.pem` and `keys/fullchain.pem` with real certificates
+> from [Let's Encrypt](https://letsencrypt.org/getting-started/) using certbot:
+> ```bash
+> sudo certbot certonly --standalone -d yourdomain.com
+> sudo cp /etc/letsencrypt/live/yourdomain.com/privkey.pem keys/privkey.pem
+> sudo cp /etc/letsencrypt/live/yourdomain.com/fullchain.pem keys/fullchain.pem
+> ```
+
+### 5. Configure environment variables
 
 Copy the example env file and fill in your values:
 
@@ -130,6 +181,13 @@ DB_PORT=3306
 DB_NAME=stackgpt_db
 DB_USER=your_mysql_user
 DB_PASSWORD=your_mysql_password
+
+SECRET_KEY=your-random-secret-key-here
+```
+
+To generate a secure `SECRET_KEY`, run:
+```bash
+python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
 ---
@@ -174,17 +232,30 @@ python database.py
 
 ## Running the Server
 
+Make sure you have completed all setup steps above (including `generate_keys.py`), then run:
+
 ```bash
-uvicorn server:app --host 0.0.0.0 --port 5000 --reload
+python3 server.py
 ```
 
 Then open your browser at:
 
 ```
-http://localhost:5000
+https://localhost:8000
 ```
 
+> **First-time browser warning:** Click **Advanced → Proceed to localhost** to bypass the
+> self-signed certificate warning. This only appears once per browser session.
+
 You will be greeted by the login/signup page. Create an account and start generating projects.
+
+### Running in Enhanced MCP Mode
+
+```bash
+python3 server.py --enhanced
+```
+
+This starts the server on port **443** (standard HTTPS) with enhanced MCP tool support.
 
 ---
 
@@ -193,6 +264,7 @@ You will be greeted by the login/signup page. Create an account and start genera
 ```
 stackgpt/
 ├── server.py                  # Main FastAPI application & all API routes
+├── generate_keys.py           # SSL key pair generator (run before server.py)
 ├── auth.py                    # JWT authentication helpers
 ├── database.py                # MySQL connection & table initialization
 ├── multiLanguageASTParser.py  # Tree-sitter multi-language AST parser
@@ -201,6 +273,9 @@ stackgpt/
 ├── token_usage_manager.py     # Token usage tracking & cost estimation
 ├── requirements.txt           # Python dependencies
 ├── .env.example               # Environment variable template
+├── keys/                      # SSL certificates (git-ignored, generate with generate_keys.py)
+│   ├── privkey.pem            # RSA private key
+│   └── fullchain.pem          # SSL certificate
 ├── static/                    # Frontend (HTML, CSS, JS)
 │   ├── index.html
 │   ├── login.html
@@ -221,7 +296,8 @@ stackgpt/
 | Variable | Required | Description |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | Yes | Your Anthropic API key |
-| `SERVER_URL` | No | Server base URL (default: `http://localhost:5000`) |
+| `SECRET_KEY` | Yes | JWT signing secret — generate with `python3 -c "import secrets; print(secrets.token_urlsafe(32))"` |
+| `SERVER_URL` | No | Server base URL (default: `https://localhost:8000`) |
 | `OUTPUT_DIR` | No | Generated projects directory (default: `generated_projects`) |
 | `LOG_LEVEL` | No | Logging verbosity (default: `INFO`) |
 | `DB_HOST` | Yes | MySQL host (default: `localhost`) |
