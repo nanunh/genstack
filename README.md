@@ -4,6 +4,24 @@ StackGPT is an open-source web application that generates complete, production-r
 
 ---
 
+<details>
+<summary>💰 Donate — Support this project</summary>
+<br>
+
+If you find this project useful, consider supporting it!
+
+Scan the QR code below to donate via **UPI**:
+
+<img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=upi%3A%2F%2Fpay%3Fpa%3D87789902020a%40kotak" alt="Donate via UPI" width="220"/>
+
+<br>
+
+**UPI ID:** `87789902020a@kotak`
+
+</details>
+
+---
+
 ## Features
 
 - **Prompt-to-Project** — Describe your app in plain English and get a complete project with all files generated
