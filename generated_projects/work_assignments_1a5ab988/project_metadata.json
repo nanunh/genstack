@@ -1,7 +1,0 @@
-{
-  "project_id": "1a5ab988-89ff-4e59-975b-5818ef83e8d7",
-  "project_name": "work_assignments",
-  "created_at": "2025-10-30T07:55:50.940025",
-  "instructions": "# Employee Assignment Tracker - Setup Instructions\n\n## Getting Started\n\n1. Download all the files from this project:\n   - index.html\n   - styles.css\n   - app.js\n\n2. Keep all files in the same directory/folder.\n\n3. Open the `index.html` file in any modern web browser (Chrome, Firefox, Safari, or Edge).\n\n## Using the Application\n\n### Adding Assignments\n- Fill out the form on the left side with employee details and assignment information\n- Click \"Add Assignment\" to create a new work assignment\n\n### Viewing Assignments\n- All assignments appear as cards in the main section\n- Use the tabs (All, Hardware, Software) to filter by assignment type\n- Use the filter controls to search by employee name, type, or status\n\n### Managing Assignments\n- Click \"Edit\" to modify an existing assignment\n- Click \"Update Status\" to quickly change just the status\n- Click \"Delete\" to remove an assignment\n\n## Data Storage\n\nAll data is stored in your browser's localStorage, which means:\n- Your assignments will persist even if you close the browser\n- The data is stored only on your device\n- If you clear browser data/cache, your assignments will be deleted\n\n## No Server Required\n\nThis is a client-side only application that runs entirely in your browser without needing any server setup.\n",
-  "file_count": 4
-}

@@ -70,7 +70,7 @@ Get your API key at: https://console.anthropic.com/settings/keys
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/stackgpt.git
+git clone https://github.com/nanunh/genstack.git
 cd stackgpt
 ```
 

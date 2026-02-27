@@ -1,7 +1,0 @@
-{
-  "project_id": "51ad9e82-5623-42af-86fb-0d2be2e82b0d",
-  "project_name": "login",
-  "created_at": "2025-12-28T12:40:17.293032",
-  "instructions": "To set up and run the Flask login page:\n\n1. Create a virtual environment:\n   ```\n   python -m venv venv\n   ```\n\n2. Activate the virtual environment:\n   - Windows: `venv\\Scripts\\activate`\n   - macOS/Linux: `source venv/bin/activate`\n\n3. Install the required dependencies:\n   ```\n   pip install -r requirements.txt\n   ```\n\n4. Run the Flask application:\n   ```\n   python app.py\n   ```\n\n5. Open your web browser and navigate to: http://127.0.0.1:5000\n\n6. Use the following credentials to log in:\n   - Email: user@example.com\n   - Password: password123\n\nThe project includes a simple login system with session management. After successful login, you'll be redirected to a dashboard page. You can log out by clicking the logout button on the dashboard.",
-  "file_count": 7
-}
