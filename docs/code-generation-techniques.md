@@ -111,7 +111,7 @@ In a code generation pipeline, this unlocks the **plan-as-data pattern**. Instea
 
 Your backend iterates this array and executes each call deterministically. The AI produced the *intent*. The machine performs the *action*.
 
-This is the bridge between the stochastic token world and the deterministic execution world. Cross it once, cleanly, and everything downstream gets simpler.
+Think of it as casting molten metal. The metal is still molten — the model is still sampling token by token from a probability distribution, nothing about that process has changed. But you've clamped a mold around the pour. The tokens flow into the schema's slots (`"tool"`, `"path"`, `"content"`) and when generation stops, what you have isn't a stream anymore — it's a solid, typed object with addressable fields. Same underlying process, completely different thing on the other side.
 
 > **The failure mode — and why Layer 3 is needed**
 >
@@ -129,6 +129,12 @@ This is the bridge between the stochastic token world and the deterministic exec
 
 The model's weights don't change between requests. The only thing you control is what you put in the context window. This layer is about making that context do real work.
 
+**Why the prompt and not mid-stream corrections?** Mid-stream steering does exist — you can bias logits at specific steps, force-inject tokens into the sequence, or stop generation mid-way, append new context, and restart. Token injection works like grabbing the wheel briefly: you force `authenticate` instead of `auth` at the exact step it's about to diverge, and the model conditions all future tokens on your correction. Stop-inject-restart is the coarser version — stop after the plan is generated, inspect it, inject a correction ("actually Postgres not MySQL"), and resume. This is essentially what multi-turn chat does.
+
+But the fundamental constraint is that the model is autoregressive — it only looks *backward*, never forward. It can't revise tokens it has already emitted. Each token becomes permanent context the moment it's sampled. You can steer what's *coming* but you can't undo the wake. Mid-stream corrections are either coarse (stop and re-prompt) or require knowing exactly which token to intercept before it fires — which for open-ended generation is hard to predict.
+
+The prompt is therefore the primary lever because it's the one moment *before* any tokens are committed where you have full control at zero cost.
+
 Think of the system prompt as a **type contract for the generation** — not just instructions, but constraints that narrow the model's solution space before the first token is sampled.
 
 A well-engineered system prompt for code generation does several things simultaneously:
@@ -142,6 +148,10 @@ A well-engineered system prompt for code generation does several things simultan
 **Few-shot examples.** One concrete example of input → output calibrates the model's distribution more reliably than three paragraphs of prose instructions. It's showing, not telling.
 
 **Context as working memory.** The model has no persistent state between calls. Everything it needs to know — existing files, declared dependencies, project structure — must be in the prompt. The context window *is* the working memory.
+
+When the prompt is precise enough, you don't need to steer mid-stream at all — the ship turns by itself. Low temperature means the model picks the highest-probability token at almost every step. If the prompt has shaped the probability landscape correctly, the highest-probability token *at every step* is already the right one. The model isn't exploring — it's following the channel you cut for it.
+
+This is why prompt engineering is a real engineering discipline, not just "write clearer sentences." You're not writing instructions for a human who will reason about them. You're sculpting a probability landscape that a sampler will walk down, one token at a time. Every word shifts that landscape. The goal is a landscape with one deep valley — the output you want — and steep walls on all sides. Get that right, and mid-stream corrections become unnecessary.
 
 > **The failure mode — and why Layer 4 is needed**
 >
