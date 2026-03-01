@@ -1,6 +1,6 @@
-# Position Is Not Free: Why Where You Put Information in a Prompt Determines Whether the Model Uses It
+# How AI Models Read Your Prompt — Attention, Position, and Why the Middle Gets Ignored
 
-> How transformers read context, why token position shapes attention, and why information placed in the middle of a long prompt gets systematically ignored.
+> A ground-up explanation of how transformers decide which parts of your input to pay attention to, why token position changes that decision, and what happens to information placed in the middle of a long context.
 
 ---
 
@@ -13,6 +13,10 @@ Transformers read all tokens simultaneously — every word in the prompt lands a
 If everything is read at once with equal weight, word order disappears. "The cat sat on the mat" and "the mat sat on the cat" contain identical tokens. Without something that weighs which token matters for which prediction, the model would produce the same representation for both sentences. Meaning collapses. Order becomes invisible.
 
 ### Attention as the solution
+
+Before anything else: a transformer is a **next-token predictor**. That is its entire job. Given every token that has come before — the full prompt, plus anything it has already generated — it predicts the single most likely next token. Then it appends that token and predicts the next one. Then the next. One token at a time, left to right, until the response is complete. Everything else — the layers, the heads, the weight matrices — is machinery in service of making that one prediction well.
+
+So the question attention is answering at every step is: *given everything I have seen so far, what single token should come next?* To answer that well, the model needs to know which of the thousands of tokens in its context are actually relevant to that decision — and which are noise.
 
 When the model is about to produce the next word, it doesn't just look at the last word. It looks back at *everything* — every word in the prompt, every word it has already generated — and asks a simple question for each one: *is this relevant to what I'm about to say?*
 
@@ -33,6 +37,56 @@ The attention mechanism works through three roles:
 **V (Value) — the work output.** What the token actually contributes once selected. This is the critical part: V has no meaning until the Query that selected it defines the role. The same token hired by a different Query contributes differently. Same person, different job, different output. The score (Q·K) decides *whether* a token is selected; the Value decides *what flows through* when it is.
 
 The output at each position is a weighted blend of all Values in the context, each weighted by how well its Key matched the Query. High match = heavy contribution. Low match = barely present.
+
+**The order of operations matters here.** Relevance is scored first, weights are assigned second, values flow third — in that exact sequence and not the other way around.
+
+First, every token in the context computes a raw relevance score against the current Query — the dot product of Q and K. This is just a number: how well does this candidate's resume match this job description? No commitment yet, just scoring. Second, those raw scores are passed through a softmax function, which normalises them into weights that sum to 1. This is the shortlist forming — the model decides *how much* to draw from each candidate, proportional to their score. Third, each token's Value is multiplied by its weight and the results are summed. This is the actual contribution flowing through — the weighted blend that becomes the representation used to predict the next token.
+
+Score → normalise → blend. Relevance is always computed before weights are assigned, and weights are always assigned before values flow. You cannot skip or reorder these steps — the whole mechanism depends on that sequence.
+
+### What "listening" actually means — no brain required
+
+When we say the position after "the" *listens* to previous tokens, that word deserves unpacking. A human listens and predicts because they have a brain that understands language. A transformer has no such thing. So what is actually happening?
+
+Every token is represented as a **list of numbers** — typically hundreds or thousands of them — called an embedding. That list is learned during training and encodes everything the model has absorbed about how that token relates to every other token it has ever seen. "Cat" is a list of numbers. "Sat" is a different list. "The" is another.
+
+Every token — including the current one deciding what comes next — starts from that same embedding. The Query is simply that current token's embedding pushed through a learned transformation (W_Q), producing a new list of numbers tuned for the question *"what am I looking for?"* Every other token in the context goes through its own transformation (W_K) to produce a Key — a list tuned for *"here is what I contain."* Q and K are not separate things that appear from nowhere. They are different projections of the same underlying token embeddings, each shaped by a different learned matrix.
+
+The dot product of Q and K — multiply the two lists pairwise, sum the results — measures how **geometrically aligned** those two vectors are. How much they point in the same direction in the high-dimensional space where all embeddings live. One number comes out. That is the score.
+
+No understanding. No interpretation. Just: *are these two lists of numbers pointing in a similar direction?* If yes, high score — this prior token is relevant. If no, low score — mostly ignored. The model learned during training that tokens which tend to matter to each other end up with embeddings that point in similar directions. "Cat" and "sat" learned to align because they co-occurred in meaningful ways across billions of training examples. The arithmetic just measures that learned alignment on demand, for the specific tokens in front of it right now.
+
+So "listen" really means: *project the current token's embedding into a Query, project every prior token's embedding into a Key, compute geometric similarity between them via multiplication and addition, use those scores to weight how much of each prior token's Value gets blended into the output.*
+
+No brain. Multiply, add, weight, blend.
+
+### How the next token is actually chosen
+
+A related question worth addressing directly: does the model propose candidate next words ("mat", "dog", "parrot") and ask previous tokens to vote? Or does each previous token suggest what it thinks should come next, and the model polls them?
+
+Neither. Here is what happens.
+
+The position where the next token will land attends to all previous tokens through the mechanism above — selective leaning, gathering context. Through that process it builds up a **summary vector** — a single list of numbers encoding the accumulated meaning of everything it attended to. Something like "we are talking about a surface that a cat sat on."
+
+That summary vector is then handed to a separate component — the language model head — which scores **every single token in the vocabulary simultaneously** against it. All 100,000 tokens get a score in one arithmetic pass. "Mat" comes out high. "Floor" comes out reasonably high. "Dog" comes out low. "Parrot" comes out very low. Softmax converts those scores into probabilities. The next token is sampled.
+
+```
+All previous tokens
+        │
+        │  attention — selective leaning, building a context summary
+        ▼
+A single vector encoding "what the context means so far"
+        │
+        │  language model head — score all 100k vocabulary tokens at once
+        ▼
+Probability distribution across the entire vocabulary
+        │
+        │  sample (or take highest)
+        ▼
+Next token: "mat"
+```
+
+Previous tokens do not vote. They do not propose. They contribute to shaping a context summary through arithmetic. That summary then faces the full vocabulary and scores it. The next word isn't chosen by the past — it emerges from a representation that the past collectively shaped.
 
 ---
 
