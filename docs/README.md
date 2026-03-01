@@ -8,42 +8,14 @@ This directory contains technical documentation for the GenStack project. Start 
 
 If you are new to this codebase — or new to AI-powered code generation as a discipline — read in this order. Each doc builds on the one before it.
 
-```
-Step 1 — position-and-attention.md
-         Why transformers attend to some tokens and not others.
-         QKV, multi-head attention, positional encodings, Lost in the Middle.
-         Foundation for everything that follows.
-              │
-              ▼
-Step 2 — code-generation-techniques.md
-         How code is generated, layer by layer.
-         Next-token prediction → decoding → structured output →
-         prompt engineering → plan-then-execute → AST-guided modification.
-         Each layer exists because the previous one has a specific failure mode.
-              │
-              ▼
-Step 3 — ast-intro.md
-         What Abstract Syntax Trees are and why they matter.
-         The compilation pipeline, traversal, transformation, and why
-         AI agents need ASTs to edit code precisely.
-              │
-              ▼
-Step 4 — overview.md
-         What GenStack is and how it is built.
-         Tech stack, project structure, and a pipeline summary showing
-         how Steps 1–3 are applied in a real system.
-              │
-              ▼
-Step 5 — code-generation.md
-         Full technical reference for GenStack's generation and modification pipeline.
-         Every component, every tool, every flow — in detail.
-              │
-              ▼
-Step 6 — coding-tools-landscape.md
-         Where GenStack sits relative to 18 other AI coding tools.
-         Read last — most useful once you understand what the system does
-         and why the architectural choices were made.
-```
+| Step | Doc | What you get |
+|---|---|---|
+| 1 | [position-and-attention.md](./position-and-attention.md) | Why transformers attend to some tokens and not others. QKV, multi-head attention, positional encodings, Lost in the Middle. Foundation for everything that follows. |
+| 2 | [code-generation-techniques.md](./code-generation-techniques.md) | How code is generated, layer by layer. Next-token prediction → decoding → structured output → prompt engineering → plan-then-execute → AST-guided modification. Each layer exists because the previous one has a specific failure mode. |
+| 3 | [ast-intro.md](./ast-intro.md) | What Abstract Syntax Trees are and why they matter. The compilation pipeline, traversal, transformation, and why AI agents need ASTs to edit code precisely. |
+| 4 | [overview.md](./overview.md) | What GenStack is and how it is built. Tech stack, project structure, and a pipeline summary showing how Steps 1–3 are applied in a real system. |
+| 5 | [code-generation.md](./code-generation.md) | Full technical reference for GenStack's generation and modification pipeline. Every component, every tool, every flow — in detail. |
+| 6 | [coding-tools-landscape.md](./coding-tools-landscape.md) | Where GenStack sits relative to 18 other AI coding tools. Read last — most useful once you understand what the system does and why the architectural choices were made. |
 
 ---
 
