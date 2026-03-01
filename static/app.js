@@ -957,34 +957,82 @@ const UI = {
             ` : '';
             
             elements.result.innerHTML = `
-                <h3>Project Generated with MCP Tools!</h3>
-                <p><strong>Project Name:</strong> ${data.project_name}</p>
-                <p><strong>Project ID:</strong> <span class="project-id">${data.project_id}</span></p>
-                <p><strong>Files Created:</strong> ${data.files.length}</p>
-                <p><strong>Created:</strong> ${new Date(data.created_at).toLocaleString()}</p>
-                
-                ${sourceInfo}
-                
-                <div class="instructions">
-                    <strong>MCP-Generated Instructions:</strong>
-    ${data.instructions}
-                </div>
-                <p><strong>Location:</strong> generated_projects/${data.project_name}_${data.project_id.slice(0, 8)}/</p>
-                
-                <div class="project-actions">
-                    <button id="toggleRunBtn-${data.project_id}"
-                            class="run-btn"
-                            onclick="ProjectManager.toggleProjectRun('${data.project_id}')"
-                            data-state="stopped">
-                        ▶ Run Project
-                    </button>
-                    <button id="deployBtn-${data.project_id}" onclick="ProjectManager.deployProject('${data.project_id}')" class="deploy-btn">
-                        🚀 Deploy Server
-                    </button>
-                    <button onclick="ProjectManager.openCodeAssistant('${data.project_id}')" class="code-assistant-btn">
-                        🤖 Code Assistant
-                    </button>
-                    <div id="projectStatus-${data.project_id}" class="project-status" style="display: none;"></div>
+                <div class="result-card">
+                    <div class="result-card-header">
+                        <div class="result-badge-circle">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        </div>
+                        <div class="result-card-titles">
+                            <h3 class="result-card-title">Project Generated!</h3>
+                            <span class="result-card-sub">Powered by MCP Tools</span>
+                        </div>
+                        <div class="result-card-badge">Success</div>
+                    </div>
+
+                    <div class="result-card-stats">
+                        <div class="result-chip">
+                            <span class="result-chip-icon">🏷️</span>
+                            <span class="result-chip-label">Name</span>
+                            <span class="result-chip-value">${data.project_name}</span>
+                        </div>
+                        <div class="result-chip">
+                            <span class="result-chip-icon">📄</span>
+                            <span class="result-chip-label">Files</span>
+                            <span class="result-chip-value">${data.files.length}</span>
+                        </div>
+                        <div class="result-chip">
+                            <span class="result-chip-icon">🕐</span>
+                            <span class="result-chip-label">Created</span>
+                            <span class="result-chip-value">${new Date(data.created_at).toLocaleString()}</span>
+                        </div>
+                    </div>
+
+                    <div class="result-card-actions project-actions">
+                        <button class="run-btn"
+                                onclick="ProjectManager.toggleProjectRun('${data.project_id}', this)"
+                                data-state="stopped">
+                            ▶ Run Project
+                        </button>
+                        <button onclick="ProjectManager.deployProject('${data.project_id}')" class="deploy-btn">
+                            🚀 Deploy
+                        </button>
+                        <button onclick="ProjectManager.openCodeAssistant('${data.project_id}')" class="code-assistant-btn">
+                            🤖 Code Assistant
+                        </button>
+                        <button class="details-toggle-btn"
+                                onclick="(function(btn){
+                                    var panel = btn.closest('.result-card').querySelector('.result-card-details');
+                                    var open = panel.style.display === 'block';
+                                    panel.style.display = open ? 'none' : 'block';
+                                    btn.classList.toggle('active', !open);
+                                    btn.querySelector('.details-btn-text').textContent = open ? 'View Details' : 'Hide Details';
+                                    btn.querySelector('.details-btn-arrow').style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
+                                })(this)">
+                            <span class="details-btn-text">View Details</span>
+                            <span class="details-btn-arrow">▾</span>
+                        </button>
+                    </div>
+
+                    <div class="project-status" style="display: none;"></div>
+
+                    <div class="result-card-details" style="display: none;">
+                        <div class="result-detail-row">
+                            <span class="result-detail-label">Project ID</span>
+                            <code class="result-detail-code">${data.project_id}</code>
+                        </div>
+                        <div class="result-detail-row">
+                            <span class="result-detail-label">Location</span>
+                            <code class="result-detail-code">generated_projects/${data.project_name}_${data.project_id.slice(0, 8)}/</code>
+                        </div>
+                        ${sourceInfo}
+                        <div class="result-instructions-block">
+                            <div class="result-instructions-header">
+                                <span>📋</span>
+                                <span>Setup Instructions</span>
+                            </div>
+                            <pre class="result-instructions-body">${data.instructions}</pre>
+                        </div>
+                    </div>
                 </div>
             `;
         } else {
@@ -1067,7 +1115,7 @@ const UI = {
                         
                         <button id="toggleRunBtn-${project.project_id}"
                                 class="run-btn"
-                                onclick="ProjectManager.toggleProjectRun('${project.project_id}')"
+                                onclick="ProjectManager.toggleProjectRun('${project.project_id}', this)"
                                 data-state="stopped"
                                 title="Run/Stop this project">
                             ▶ Run Project
@@ -1289,36 +1337,39 @@ const ProjectManager = {
         }
     },
     
-    async runProject(projectId) {
-        const statusDiv = document.getElementById(`projectStatus-${projectId}`);
-        const runBtn = document.getElementById(`runProjectBtn-${projectId}`);
-        
+    async runProject(projectId, btn) {
+        const runBtn = btn || document.getElementById(`toggleRunBtn-${projectId}`);
+        const statusDiv = runBtn
+            ? (runBtn.closest('.project-actions')?.nextElementSibling?.classList.contains('project-status')
+                ? runBtn.closest('.project-actions').nextElementSibling
+                : runBtn.closest('.project-actions')?.querySelector('.project-status'))
+            : document.getElementById(`projectStatus-${projectId}`);
+
         try {
             if (runBtn) {
-            runBtn.disabled = true;
-            runBtn.textContent = 'Starting Project...';
-        }
+                runBtn.disabled = true;
+                runBtn.textContent = 'Starting Project...';
+            }
             if (statusDiv) {
                 statusDiv.style.display = 'block';
                 statusDiv.innerHTML = '<p>Installing dependencies and starting project...</p>';
             }
-            
+
             const result = await ApiService.runProject(projectId);
-            
+
             if (result.status === 'running') {
-                const toggleBtn = document.getElementById(`toggleRunBtn-${projectId}`);
-                if (toggleBtn) {
-                    toggleBtn.textContent = 'Stop Project';
-                    toggleBtn.setAttribute('data-state', 'running');
-                    toggleBtn.classList.remove('run-btn');
-                    toggleBtn.classList.add('stop-btn');
-                    toggleBtn.disabled = false;
+                if (runBtn) {
+                    runBtn.textContent = '■ Stop Project';
+                    runBtn.setAttribute('data-state', 'running');
+                    runBtn.classList.remove('run-btn');
+                    runBtn.classList.add('stop-btn');
+                    runBtn.disabled = false;
                 }
                 if (statusDiv) {
                     statusDiv.innerHTML = `
                         <div class="running-status">
                             <p><strong>Project is running!</strong></p>
-                            <p><strong>Access your project:</strong> 
+                            <p><strong>Access your project:</strong>
                                 <a href="${result.url}" target="_blank" class="project-url">${result.url}</a>
                             </p>
                             <p>Command: <code>${result.command}</code></p>
@@ -1328,7 +1379,7 @@ const ProjectManager = {
                 }
             } else {
                 if (runBtn) {
-                    runBtn.textContent = 'Run Project';
+                    runBtn.textContent = '▶ Run Project';
                     runBtn.disabled = false;
                 }
                 if (statusDiv) {
@@ -1340,11 +1391,11 @@ const ProjectManager = {
                     `;
                 }
             }
-            
+
         } catch (error) {
             console.error('Error running project:', error);
             if (runBtn) {
-                runBtn.textContent = 'Run Project';
+                runBtn.textContent = '▶ Run Project';
                 runBtn.disabled = false;
             }
             if (statusDiv) {
@@ -1357,26 +1408,29 @@ const ProjectManager = {
         }
     },
 
-    async stopProject(projectId) {
-        const statusDiv = document.getElementById(`projectStatus-${projectId}`);
-        const runBtn = document.getElementById(`runProjectBtn-${projectId}`);
-        
+    async stopProject(projectId, btn) {
+        const runBtn = btn || document.getElementById(`toggleRunBtn-${projectId}`);
+        const statusDiv = runBtn
+            ? (runBtn.closest('.project-actions')?.nextElementSibling?.classList.contains('project-status')
+                ? runBtn.closest('.project-actions').nextElementSibling
+                : runBtn.closest('.project-actions')?.querySelector('.project-status'))
+            : document.getElementById(`projectStatus-${projectId}`);
+
         try {
             if (runBtn) {
                 runBtn.disabled = true;
                 runBtn.textContent = 'Stopping...';
             }
-            
+
             const result = await ApiService.stopProject(projectId);
-            
-             if (result.status === 'stopped') {
-                 const toggleBtn = document.getElementById(`toggleRunBtn-${projectId}`);
-                if (toggleBtn) {
-                    toggleBtn.textContent = 'Run Project';
-                    toggleBtn.setAttribute('data-state', 'stopped');
-                    toggleBtn.classList.remove('stop-btn');
-                    toggleBtn.classList.add('run-btn');
-                    toggleBtn.disabled = false;
+
+            if (result.status === 'stopped') {
+                if (runBtn) {
+                    runBtn.textContent = '▶ Run Project';
+                    runBtn.setAttribute('data-state', 'stopped');
+                    runBtn.classList.remove('stop-btn');
+                    runBtn.classList.add('run-btn');
+                    runBtn.disabled = false;
                 }
                 if (statusDiv) {
                     statusDiv.innerHTML = '<p>Project stopped successfully</p>';
@@ -1394,7 +1448,7 @@ const ProjectManager = {
                     `;
                 }
             }
-            
+
         } catch (error) {
             console.error('Error stopping project:', error);
             if (runBtn) runBtn.disabled = false;
@@ -1408,14 +1462,14 @@ const ProjectManager = {
         }
     },
 
-    async toggleProjectRun(projectId) {
-        const toggleBtn = document.getElementById(`toggleRunBtn-${projectId}`);
+    async toggleProjectRun(projectId, btn) {
+        const toggleBtn = btn || document.getElementById(`toggleRunBtn-${projectId}`);
         const currentState = toggleBtn?.getAttribute('data-state');
-        
+
         if (currentState === 'running') {
-            await this.stopProject(projectId);
+            await this.stopProject(projectId, toggleBtn);
         } else {
-            await this.runProject(projectId);
+            await this.runProject(projectId, toggleBtn);
         }
     },
     
