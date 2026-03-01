@@ -25,7 +25,21 @@ The transformer architecture — attention heads, feed-forward layers, residual 
 In practice, the model computes a score over its entire vocabulary (say, 100,000 tokens) at each step and samples from that distribution. Two parameters shape the sample:
 
 - **Temperature** — a divisor applied to the scores before softmax. Low temperature (e.g. 0.1) sharpens the distribution: the top token wins almost every time. High temperature (e.g. 1.0) flattens it: the model takes more risks. Think of it as the **confidence dial** — turn it down when you want reliable structure, turn it up when you want creative variation.
-- **Top-p / top-k** — truncate the tail of the distribution before sampling. If the bottom 90% of the vocabulary collectively accounts for only 5% of probability mass, you cut it off. This avoids the model sampling genuinely weird tokens while still allowing some variation.
+- **Top-p / top-k** — truncate the tail of the distribution before sampling. The model assigns a probability to all ~100,000 tokens at every step — most of them vanishingly small. **Top-k** keeps only the K highest-probability tokens and throws the rest out. **Top-p (nucleus sampling)** is smarter: instead of a fixed count, you set a probability budget. Walk down the ranked list — highest first — and keep adding tokens until their cumulative probability hits your threshold (e.g. 0.95). Everything below gets zeroed out.
+
+  Concretely, if the distribution at one step looks like this:
+
+  ```
+  `function`   → 60%
+  `const`      → 20%
+  `return`     → 10%
+  `class`      → 5%
+  ... (99,996 other tokens sharing the remaining 5%)
+  ```
+
+  With top-p = 0.95 you stop at `class` — four tokens, 95% of the mass. The 99,996-token tail is cut entirely. You sample from just those four. Without it, every one of those weird tail tokens has a non-zero chance of firing. Over hundreds of tokens in a generated function those misfires accumulate. Top-p makes them impossible while preserving real choice between legitimately plausible options.
+
+  Temperature and top-p work together: temperature *reshapes* the whole distribution (flatter or sharper), top-p *truncates* it after reshaping. In practice you set both — temperature for confidence, top-p to cut the long weird tail.
 
 This layer alone can produce impressive-looking code. The model has seen so much source code in training that "what token comes after `def authenticate(token, db):`" is a question it can answer well.
 
@@ -39,11 +53,17 @@ This layer alone can produce impressive-looking code. The model has seen so much
 
 ---
 
-## Layer 1 — Decoding Strategies: Steering the Sampler
+## Layer 1 — From Tokens to Structured Tokens: Decoding Strategies
 
-Once you accept that the raw sampler needs guidance, the question becomes: how do you steer it without discarding its generative power?
+Layer 0 gives you tokens — a raw stream sampled one at a time from a probability distribution. Layer 1 gives you *structured* tokens — the same stream, but now constrained so the sequence as a whole conforms to a shape. The primitive hasn't changed; what's changed is that each token is now sampled with awareness of what the whole output is supposed to look like.
 
-The answer is to intervene *at the logit level* — before sampling happens — to reshape the probability distribution at each step.
+The question is: how do you enforce that structure without discarding the model's generative power?
+
+The answer is to intervene before sampling happens — at the point where the model has computed raw scores for every token but hasn't yet converted them to probabilities.
+
+A quick note on terminology: the model doesn't produce probabilities directly. It produces raw numbers called **logits** — one per token in the vocabulary — where higher means "more likely." A softmax function then converts those logits into a proper probability distribution (all values between 0 and 1, summing to 1). The logit stage is the last moment you can reach in and adjust scores before the distribution is finalised and the sample is drawn. This is why it matters: change a logit and you change the probability. Zero out a logit and that token becomes impossible.
+
+Intervening at the logit level means reshaping those raw scores — before softmax, before sampling — to steer the output toward what you want.
 
 **Greedy decoding** is the simplest strategy: always pick the highest-probability token. Fast, deterministic, but brittle. It commits to the first path it sees and can't recover from a locally-reasonable-but-globally-bad choice. Like a GPS that picks the first route it finds and ignores traffic.
 
@@ -57,7 +77,9 @@ The result: structurally valid output, guaranteed, regardless of what the model'
 
 > **The failure mode — and why Layer 2 is needed**
 >
-> Decoding strategies can guarantee that your token stream is syntactically valid — a well-formed string. But downstream systems don't consume strings. They need *data*. A function that receives the model's output needs to extract file paths, code content, dependency names, and execution order — not parse prose.
+> Decoding strategies can guarantee that your token stream is syntactically valid — a well-formed string. But downstream systems can't act on free-form text. They need *structured data* — a string with a guaranteed shape that code can traverse without guessing. JSON is still a string, but it's a string where you know exactly where to find every value: `response["files"][0]["path"]` either works or throws. No hunting, no guessing, no regex. The structure is the contract. A function that receives the model's output needs to extract file paths, code content, dependency names, and execution order — not hunt through a paragraph of English to find them.
+
+"Parsing prose" means writing fragile string-extraction code: regex to find a filename, `split("```")` to extract a code block, `strip()` calls to clean up surrounding text. It works until the model changes its phrasing slightly — "here is the file" vs "I've created the file" — and your extractor silently returns nothing. The pipeline breaks not because the model was wrong, but because your parser didn't anticipate that sentence structure.
 >
 > A syntactically valid response that says "Sure! Here's how I'd approach this project..." is useless to a code execution pipeline, even if every character is technically legal.
 >
@@ -65,9 +87,11 @@ The result: structurally valid output, guaranteed, regardless of what the model'
 
 ---
 
-## Layer 2 — Structured Output: From Tokens to Typed Data
+## Layer 2 — From Structured Tokens to Typed Data: Schema-Enforced Output
 
-This layer is about forcing the model's output into a schema your program can consume directly.
+Layer 1 gives you structured text — a string you *can* parse. Layer 2 gives you typed data — an object you don't *need* to parse because the structure is already navigable. The difference is the same as between a raw JSON string and a deserialised dataclass or struct: same information, but one of them your code can traverse by key, index, and type without any string manipulation at all.
+
+This layer is about enforcing a schema on the model's output so that what comes back maps directly onto the types your program already speaks.
 
 JSON mode — now standard in most model APIs — is grammar-constrained decoding with a fixed grammar: the JSON specification. The model emits tokens that, when decoded, are always valid JSON. No post-processing, no regex extraction, no "try to find the `{` somewhere in the response."
 
