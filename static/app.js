@@ -984,6 +984,9 @@ const UI = {
                     <button onclick="ProjectManager.openCodeAssistant('${data.project_id}')" class="code-assistant-btn">
                         🤖 Code Assistant
                     </button>
+                    <button onclick="CodeAssistant.openPanel('${data.project_id}')" class="side-chat-btn" title="Open quick chat panel">
+                        💬 Side Chat
+                    </button>
                     <div id="projectStatus-${data.project_id}" class="project-status" style="display: none;"></div>
                 </div>
             `;
@@ -1083,6 +1086,11 @@ const UI = {
                                 class="code-assistant-btn" title="Open Code Assistant for this project">
                             🤖 Code Assistant
                         </button>
+
+                        <button onclick="CodeAssistant.openPanel('${project.project_id}')"
+                                class="side-chat-btn" title="Open quick chat panel">
+                            💬 Side Chat
+                        </button>
                         
                         <button onclick="TokenUI.showTokenModal('${project.project_id}', '${project.project_name}')" 
                                 class="token-usage-btn" title="View token usage details">
@@ -1158,6 +1166,34 @@ UI.showResult = function(data, type, mode = 'text') {
         TokenUI.displayTokenUsageInResult(data.token_usage, resultContainer);
     }
 };
+
+// Shared markdown + syntax-highlight formatter used by both chat views
+function formatMessageContent(content) {
+    const escapeHtml = (str) => str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    // Fenced code blocks — preserve newlines inside <pre>
+    let html = content.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+        const cls = lang ? `language-${lang}` : 'language-none';
+        return `<pre class="code-block"><code class="${cls}">${escapeHtml(code.trimEnd())}</code></pre>`;
+    });
+
+    // Inline code
+    html = html.replace(/`([^`\n]+)`/g, (_, code) => `<code class="inline-code">${escapeHtml(code)}</code>`);
+
+    // Bold and italic
+    html = html.replace(/\*\*(.+?)\*\*/gs, '<strong>$1</strong>');
+    html = html.replace(/\*(.+?)\*/gs, '<em>$1</em>');
+
+    // Newlines → <br> outside of <pre> blocks
+    html = html.split(/(<pre[\s\S]*?<\/pre>)/).map((part, i) =>
+        i % 2 === 0 ? part.replace(/\n/g, '<br>') : part
+    ).join('');
+
+    return html;
+}
 
 const ProjectManager = {
     async loadProjects() {
@@ -1948,7 +1984,7 @@ const ProjectManager = {
                 
                 // Show result
                 if (result.is_information_request) {
-                    this.showMessageFullPage(result.explanation, 'assistant');
+                    this.showMessageFullPage(result.explanation, 'assistant', false, result.token_usage);
                 } else {
                     this.handleCodeModificationResult(result);
                 }
@@ -1970,12 +2006,14 @@ const ProjectManager = {
     },
 
     async handleCodeModificationResult(result) {
-        const shouldApply = await this.showConfirmationDialog(result);
+        const shouldApply = await CodeAssistant.showConfirmationDialog(result);
         
         if (shouldApply) {
             this.showMessageFullPage(
                 'Changes applied successfully! ' + result.explanation,
-                'assistant'
+                'assistant',
+                false,
+                result.token_usage
             );
             // Reload project
             this.currentProject = await ApiService.getProject(this.currentProjectId);
@@ -1990,11 +2028,11 @@ const ProjectManager = {
     createMCPStreamingContainer() {
         const chatContainer = document.getElementById('codeAssistantMessages');
         if (!chatContainer) return;
-        
+
         const streamingDiv = document.createElement('div');
         streamingDiv.id = 'mcpStreamingOutput';
         streamingDiv.className = 'chat-message-full assistant-message-full streaming';
-        
+
         streamingDiv.innerHTML = `
             <div class="message-content-full">
                 <div class="mcp-streaming-header">
@@ -2005,10 +2043,22 @@ const ProjectManager = {
                 <div class="message-time-full">${new Date().toLocaleTimeString()}</div>
             </div>
         `;
-        
+
         chatContainer.appendChild(streamingDiv);
         chatContainer.scrollTop = chatContainer.scrollHeight;
-        
+
+        // 30s safety timeout — guaranteed cleanup if the operation hangs
+        this._mcpTimeoutId = setTimeout(() => {
+            this._mcpTimeoutId = null;
+            this.addMCPStreamMessage('Request timed out after 30 seconds.', 'error');
+            setTimeout(() => {
+                this.removeMCPStreamingContainer();
+                this.showMessageFullPage('The request timed out. Please try again.', 'assistant');
+                const btn = document.getElementById('sendCodeAssistantBtn');
+                if (btn) btn.disabled = false;
+            }, 1500);
+        }, 30000);
+
         return streamingDiv;
     },
 
@@ -2096,24 +2146,32 @@ const ProjectManager = {
     },
 
     removeMCPStreamingContainer() {
+        // Always cancel the safety timeout first
+        if (this._mcpTimeoutId) {
+            clearTimeout(this._mcpTimeoutId);
+            this._mcpTimeoutId = null;
+        }
+
         const streamingOutput = document.getElementById('mcpStreamingOutput');
         if (streamingOutput) {
             streamingOutput.style.opacity = '0';
             streamingOutput.style.transform = 'translateY(-10px)';
             streamingOutput.style.transition = 'all 0.3s ease';
-            
+
             setTimeout(() => {
                 if (streamingOutput.parentNode) {
                     streamingOutput.remove();
                 }
+                const chatContainer = document.getElementById('codeAssistantMessages');
+                if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
             }, 300);
         }
     },
     
-    showMessageFullPage(content, type, isProcessing = false) {
+    showMessageFullPage(content, type, isProcessing = false, tokenUsage = null) {
         const messagesContainer = document.getElementById('codeAssistantMessages');
         if (!messagesContainer) return;
-        
+
         // Hide welcome message when user sends first message
         if (type === 'user') {
             const welcomeMsg = messagesContainer.querySelector('.welcome-message-full');
@@ -2121,27 +2179,49 @@ const ProjectManager = {
                 welcomeMsg.style.display = 'none';
             }
         }
-        
+
         const messageDiv = document.createElement('div');
         messageDiv.className = `chat-message-full ${type}-message-full`;
-        
+
         if (isProcessing) {
             messageDiv.id = 'processingMessageFull';
         }
-        
+
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content-full';
-        contentDiv.textContent = content;
-        
+        if (type === 'assistant') {
+            contentDiv.innerHTML = formatMessageContent(content);
+        } else {
+            contentDiv.textContent = content;
+        }
+
         const timeDiv = document.createElement('div');
         timeDiv.className = 'message-time-full';
         timeDiv.textContent = new Date().toLocaleTimeString();
-        
+
         messageDiv.appendChild(contentDiv);
         messageDiv.appendChild(timeDiv);
-        
+
+        if (type === 'assistant' && tokenUsage) {
+            const tokenDiv = document.createElement('div');
+            tokenDiv.className = 'token-usage-line';
+            const input = (tokenUsage.input_tokens || 0).toLocaleString();
+            const output = (tokenUsage.output_tokens || 0).toLocaleString();
+            const cost = (tokenUsage.cost_estimate || 0).toFixed(4);
+            tokenDiv.textContent = `Tokens used: ${input} input / ${output} output (~$${cost})`;
+            messageDiv.appendChild(tokenDiv);
+        }
+
         messagesContainer.appendChild(messageDiv);
+
+        if (type === 'assistant' && typeof Prism !== 'undefined') {
+            Prism.highlightAllUnder(contentDiv);
+        }
+
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        requestAnimationFrame(() => {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        });
     },
 
     removeProcessingMessage() {
@@ -2619,6 +2699,7 @@ const CodeAssistant = {
     
     init() {
         this.setupEventListeners();
+        this.setupResizeHandle();
     },
     
     setupEventListeners() {
@@ -2626,55 +2707,68 @@ const CodeAssistant = {
         document.getElementById('closePanelBtn')?.addEventListener('click', () => {
             this.closePanel();
         });
-        
+
         document.getElementById('togglePanelSize')?.addEventListener('click', () => {
             this.togglePanelSize();
         });
-        
+
         // Enhanced chat functionality
         const chatInput = document.getElementById('chatInput');
         const sendButton = document.getElementById('sendChatBtn');
-        
-        if (!chatInput || !sendButton) {
-            console.error('Chat elements not found');
-            return;
+
+        if (chatInput && sendButton) {
+            // Auto-resize textarea and update send button
+            chatInput.addEventListener('input', () => {
+                this.autoResizeTextarea(chatInput);
+                this.updateSendButton();
+            });
+
+            // Enhanced send message with intelligent processing
+            sendButton.addEventListener('click', () => {
+                this.sendIntelligentMessage();
+            });
+
+            // Enter key to send (Shift+Enter for new line)
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.sendIntelligentMessage();
+                }
+            });
         }
         
-        // Auto-resize textarea and update send button
-        chatInput.addEventListener('input', () => {
-            this.autoResizeTextarea(chatInput);
-            this.updateSendButton();
-        });
-        
-        // Enhanced send message with intelligent processing
-        sendButton.addEventListener('click', () => {
-            this.sendIntelligentMessage();
-        });
-        
-        // Enter key to send (Shift+Enter for new line)
-        chatInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                this.sendIntelligentMessage();
-            }
-        });
-        
-        // Remove old quick action buttons - we don't need them anymore!
-        // The LLM will understand intent from natural language
+        // Replace old quick action buttons with scrollable tip pills
         const quickActions = document.querySelector('.quick-actions');
         if (quickActions) {
+            const tips = [
+                'Add a login form',
+                'Fix the bug in authentication',
+                'Delete the old contact page',
+                'Explain how this component works',
+                'Add dark mode feature',
+            ];
+
             quickActions.innerHTML = `
                 <div class="enhanced-tips">
                     <p><strong>💡 Just tell me what you want to do!</strong></p>
                     <div class="tip-examples">
-                        <span class="tip">"Add a login form"</span>
-                        <span class="tip">"Fix the bug in authentication"</span>
-                        <span class="tip">"Delete the old contact page"</span>
-                        <span class="tip">"Explain how this component works"</span>
-                        <span class="tip">"Add dark mode feature"</span>
+                        ${tips.map(t => `<span class="tip" data-tip="${t}">${t}</span>`).join('')}
                     </div>
                 </div>
             `;
+
+            // Click a tip → fill the input and focus it
+            quickActions.querySelectorAll('.tip').forEach(tipEl => {
+                tipEl.addEventListener('click', () => {
+                    const chatInput = document.getElementById('chatInput');
+                    if (chatInput) {
+                        chatInput.value = tipEl.dataset.tip;
+                        chatInput.focus();
+                        this.autoResizeTextarea(chatInput);
+                        this.updateSendButton();
+                    }
+                });
+            });
         }
     },
     
@@ -2705,31 +2799,60 @@ const CodeAssistant = {
     async openPanel(projectId) {
         this.currentProjectId = projectId;
         this.isOpen = true;
-        
-        console.log('Opening enhanced panel for project:', projectId);
-        
-        // Show panel
+
         const panel = document.getElementById('codeModificationPanel');
         if (!panel) {
             console.error('Code modification panel not found!');
             return;
         }
-        
+
         panel.style.display = 'flex';
-        
-        // Load project first
+
         await this.loadProject();
-        
-        // Show enhanced initial message
-        this.showEnhancedInitialMessage();
-        
-        // Animate panel in
+        await this.loadPanelChatHistory();
+
         setTimeout(() => {
             panel.classList.add('panel-open');
         }, 10);
-        
-        // Update send button state
+
         this.updateSendButton();
+    },
+
+    async loadPanelChatHistory() {
+        const chatMessages = document.getElementById('chatMessages');
+        if (!chatMessages) return;
+
+        // Clear previous messages (keep welcome element)
+        chatMessages.querySelectorAll('.chat-message').forEach(m => m.remove());
+
+        const welcomeMsg = chatMessages.querySelector('.welcome-message');
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+
+        try {
+            const response = await fetch(`/api/projects/${this.currentProjectId}/chat-history`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) {
+                if (welcomeMsg) welcomeMsg.style.display = 'block';
+                return;
+            }
+
+            const data = await response.json();
+            const projectMessages = data.messages?.filter(
+                msg => msg.project_id === this.currentProjectId
+            ) || [];
+
+            if (projectMessages.length > 0) {
+                if (welcomeMsg) welcomeMsg.style.display = 'none';
+                projectMessages.forEach(msg => this.showChatMessage(msg.message, msg.sender));
+            } else {
+                if (welcomeMsg) welcomeMsg.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Error loading panel chat history:', error);
+            if (welcomeMsg) welcomeMsg.style.display = 'block';
+        }
     },
     
     closePanel() {
@@ -2747,7 +2870,47 @@ const CodeAssistant = {
     
     togglePanelSize() {
         const panel = document.getElementById('codeModificationPanel');
+        // Clear any drag-set inline width before toggling class
+        panel.style.width = '';
         panel.classList.toggle('panel-expanded');
+    },
+
+    setupResizeHandle() {
+        const panel = document.getElementById('codeModificationPanel');
+        const handle = document.getElementById('panelResizeHandle');
+        if (!panel || !handle) return;
+
+        let isResizing = false;
+        let startX, startWidth;
+
+        handle.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            startX = e.clientX;
+            startWidth = panel.offsetWidth;
+            handle.classList.add('resizing');
+            document.body.style.cursor = 'ew-resize';
+            document.body.style.userSelect = 'none';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            const dx = startX - e.clientX; // drag left → wider
+            const newWidth = Math.min(
+                Math.max(startWidth + dx, 320),
+                window.innerWidth - 40
+            );
+            panel.style.width = newWidth + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                handle.classList.remove('resizing');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+        });
     },
 
     async loadProject() {
@@ -2861,28 +3024,34 @@ What would you like to work on in "${this.currentProject.project_name}"?`;
         this.showChatMessage(welcomeMsg, 'system');
     },
     
-    showChatMessage(content, type = 'assistant', isProcessing = false) {
+    showChatMessage(content, type = 'assistant', isProcessing = false, tokenUsage = null) {
         const chatContainer = document.getElementById('chatMessages');
         if (!chatContainer) {
             console.error('Chat messages container not found!');
             return;
         }
-        
+
+        // Hide welcome message on first user message
+        if (type === 'user') {
+            const welcomeMsg = chatContainer.querySelector('.welcome-message');
+            if (welcomeMsg) welcomeMsg.style.display = 'none';
+        }
+
         // Create message element
         const messageDiv = document.createElement('div');
         messageDiv.className = `chat-message ${type}-message`;
-        
+
         if (isProcessing) {
             messageDiv.classList.add('processing');
             messageDiv.id = 'processingMessage';
         }
-        
+
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
-        
+
         const textDiv = document.createElement('div');
         textDiv.className = 'message-text';
-        
+
         // Handle different content types
         if (type === 'system') {
             textDiv.innerHTML = this.formatSystemMessage(content);
@@ -2898,39 +3067,47 @@ What would you like to work on in "${this.currentProject.project_name}"?`;
         } else {
             textDiv.innerHTML = this.formatMessage(content);
         }
-        
+
         const timeDiv = document.createElement('div');
         timeDiv.className = 'message-time';
         timeDiv.textContent = new Date().toLocaleTimeString();
-        
+
         contentDiv.appendChild(textDiv);
         contentDiv.appendChild(timeDiv);
+
+        if (type === 'assistant' && tokenUsage) {
+            const tokenDiv = document.createElement('div');
+            tokenDiv.className = 'token-usage-line';
+            const input = (tokenUsage.input_tokens || 0).toLocaleString();
+            const output = (tokenUsage.output_tokens || 0).toLocaleString();
+            const cost = (tokenUsage.cost_estimate || 0).toFixed(4);
+            tokenDiv.textContent = `Tokens used: ${input} input / ${output} output (~$${cost})`;
+            contentDiv.appendChild(tokenDiv);
+        }
+
         messageDiv.appendChild(contentDiv);
-        
+
         chatContainer.appendChild(messageDiv);
-        
+
+        if (type === 'assistant' && typeof Prism !== 'undefined') {
+            Prism.highlightAllUnder(contentDiv);
+        }
+
         // Scroll to bottom
         chatContainer.scrollTop = chatContainer.scrollHeight;
-        
+        requestAnimationFrame(() => {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        });
+
         return messageDiv;
     },
-    
+
     formatSystemMessage(content) {
-        // Convert markdown-style formatting to HTML
-        return content
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.*?)\*/g, '<em>$1</em>')
-            .replace(/`(.*?)`/g, '<code>$1</code>')
-            .replace(/\n/g, '<br>');
+        return formatMessageContent(content);
     },
-    
+
     formatMessage(content) {
-        // Format regular messages with basic markdown support
-        return content
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.*?)\*/g, '<em>$1</em>')
-            .replace(/`(.*?)`/g, '<code>$1</code>')
-            .replace(/\n/g, '<br>');
+        return formatMessageContent(content);
     },
     
     removeProcessingMessage() {
@@ -3200,8 +3377,8 @@ What would you like to work on in "${this.currentProject.project_name}"?`;
             // Check if this is an information request
             if (result.is_information_request) {
                 // Just show the explanation, no confirmation dialog
-                this.showChatMessage(result.explanation, 'assistant');
-                
+                this.showChatMessage(result.explanation, 'assistant', false, result.token_usage);
+
                 if (!result.success) {
                     this.showChatMessage(
                         'I encountered an error while analyzing the project. Please try rephrasing your question.',
@@ -3212,14 +3389,16 @@ What would you like to work on in "${this.currentProject.project_name}"?`;
                 // This is a code modification request - show confirmation dialog
                 if (result.success) {
                     const shouldApply = await this.showConfirmationDialog(result);
-                    
+
                     if (shouldApply) {
                         this.showChatMessage(
-                            'Changes applied successfully! ' + 
+                            'Changes applied successfully! ' +
                             (result.new_files.length > 0 ? `Created ${result.new_files.length} new files. ` : '') +
                             (result.affected_files.length > 0 ? `Modified ${result.affected_files.length} existing files. ` : '') +
                             (result.deleted_files.length > 0 ? `Deleted ${result.deleted_files.length} files. ` : ''),
-                            'assistant'
+                            'assistant',
+                            false,
+                            result.token_usage
                         );
                         
                         // Reload project to get updated content
@@ -3340,6 +3519,8 @@ What would you like to work on in "${this.currentProject.project_name}"?`;
         const streamingOutput = document.getElementById('streamingOutput');
         if (streamingOutput) {
             streamingOutput.remove();
+            const chatContainer = document.getElementById('chatMessages');
+            if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
         }
     },
     
@@ -3837,5 +4018,4 @@ window.addEventListener('unhandledrejection', (e) => {
 const originalInitializeEventListeners = initializeEventListeners;
 initializeEventListeners = function() {
     originalInitializeEventListeners();
-    CodeAssistant.init();
 };

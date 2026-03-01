@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FullStack - AI-Powered Project Generator</title>
     <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -206,9 +207,11 @@
                                 <!-- Welcome Message Area -->
                                 <div id="codeAssistantMessages" class="code-assistant-messages">
                                     <div class="welcome-message-full">
+                                        <h3>🤖 Code Assistant</h3>
+                                        <p>Ask me anything about your project — I can add features, fix bugs, explain code, or make changes across your files.</p>
                                         <!-- Quick Action Tips -->
                                         <div class="quick-tips-section">
-                                            <p>💡 <strong>Quick suggestions:</strong></p>
+                                            <p>💡 <strong>Try a suggestion to get started:</strong></p>
                                             <div class="quick-tips-grid">
                                                 <button class="quick-tip-btn">"Add a login form"</button>
                                                 <button class="quick-tip-btn">"Fix the bug in authentication"</button>
@@ -241,6 +244,7 @@
 
     <!-- Code Modification Panel -->
     <div id="codeModificationPanel" class="code-mod-panel" style="display: none;">
+        <div id="panelResizeHandle" class="panel-resize-handle" title="Drag to resize"></div>
         <div class="panel-header">
             <h3 class="panel-title">
                 <span class="panel-icon">🤖</span>
@@ -315,6 +319,8 @@
         </div>
     </footer>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
     <script src="/static/app.js"></script>
 </body>
 </html>
