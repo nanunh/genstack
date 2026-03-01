@@ -37,6 +37,15 @@ Covers: what an AST is, the compilation pipeline (lexing → parsing → AST), a
 
 ---
 
+### [position-and-attention.md](./position-and-attention.md)
+**Why token position determines whether the model uses your information** — how transformers read context, why attention works through selective leaning, and why information in the middle of a long prompt gets systematically ignored.
+
+Covers: the parallel processing problem, attention and QKV mechanics (with the hiring pool analogy), multi-head attention as multiple companies reading one candidate pool, the invisible position problem, positional encoding approaches (absolute, RoPE, ALiBi), the U-shaped attention curve, the *Lost in the Middle* paper (Liu et al., 2023), and practical prompt design implications.
+
+*~15 min read.*
+
+---
+
 ### [code-generation-techniques.md](./code-generation-techniques.md)
 **How code is actually generated** — a layered walkthrough of the techniques that power AI code generation, from transformer next-token prediction up to AST-guided modification.
 
