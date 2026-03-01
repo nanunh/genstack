@@ -68,9 +68,9 @@ A related question worth addressing directly: does the model propose candidate n
 
 Neither. Here is what happens.
 
-The position where the next token will land attends to all previous tokens through the mechanism above — selective leaning, gathering context. Through that process it builds up a **summary vector** — a single list of numbers encoding the accumulated meaning of everything it attended to. Something like "we are talking about a surface that a cat sat on."
+The position where the next token will land attends to all previous tokens through the mechanism above — selective leaning, gathering context. Not all tokens contribute equally. "Cat", "sat", and "on" score high: each carries specific, discriminating information about what comes next. The three instances of "the" score low — "the" appears before nouns in nearly every sentence in every context, so its presence tells you almost nothing about which word follows. Through that selective leaning the model builds up a **summary vector** — a single list of numbers encoding the accumulated meaning of everything it attended to. Something like "we are talking about a surface that a cat sat on."
 
-That summary vector is then handed to a separate component — the language model head — which scores **every single token in the vocabulary simultaneously** against it. All 100,000 tokens get a score in one arithmetic pass. "Mat" comes out high. "Floor" comes out reasonably high. "Dog" comes out low. "Parrot" comes out very low. Softmax converts those scores into probabilities. The next token is sampled.
+That summary vector is handed to a separate component — the language model head — which scores **every single token in the vocabulary simultaneously** against it. Many words fit: "floor", "carpet", "cushion", "branch" all describe things a cat could sit on. The score each gets reflects both semantic fit and frequency patterns learned from training — how often that word appeared after similar contexts. "Mat" scores highest not just because it fits semantically but because "the cat sat on the mat" is one of the most repeated phrases in written English, and that repetition has been absorbed as statistical weight. "Floor" comes out reasonably high. "Branch" lower. "Dog" low. "Parrot" very low. Softmax converts those scores into probabilities. The next token is sampled.
 
 ```
 All previous tokens
