@@ -10,11 +10,11 @@
 
 Transformers read all tokens simultaneously — every word in the prompt lands at once, not left to right like a human reading a sentence. That parallelism is what makes them fast at scale. But it creates an immediate problem.
 
-If everything is read at once with equal weight, word order disappears. "The cat sat on the mat" and "the mat sat on the cat" contain identical tokens. Without something that weighs which token matters for which prediction, the model would produce the same representation for both sentences. Meaning collapses. Order becomes invisible.
+If everything is read at once with equal weight, word order disappears. "The cat sat on the mat" and "the mat sat on the cat" contain identical tokens. Without something that weighs which token matters for which prediction, the model would produce the same internal summary — the same list of numbers it uses to capture what a sequence means — for both sentences. Meaning collapses. Order becomes invisible.
 
 ### Attention as the solution
 
-Before anything else: a transformer is a **next-token predictor**. That is its entire job. Given every token that has come before — the full prompt, plus anything it has already generated — it predicts the single most likely next token. Then it appends that token and predicts the next one. Then the next. One token at a time, left to right, until the response is complete. Everything else — the layers, the heads, the weight matrices — is machinery in service of making that one prediction well.
+Before anything else: a transformer is a **next-token predictor**. That is its entire job. Given every token that has come before — the full prompt, plus anything it has already generated — it predicts the single most likely next token. Then it appends that token and predicts the next one. Then the next. One token at a time, left to right, until the response is complete. Everything else — the layers, the heads, the weight matrices — is machinery in service of making that one prediction well. Each of these will make complete sense by the end of this doc; for now just hold the shape: one job, one output, one token at a time.
 
 So the question at every step is: *given everything before this point, which single token should come next?*
 
@@ -42,7 +42,7 @@ The output at each position is a weighted blend of all Values in the context, ea
 
 **The order of operations matters here.** Relevance is scored first, weights are assigned second, values flow third — in that exact sequence and not the other way around.
 
-First, every token in the context computes a raw relevance score against the current Query — the dot product of Q and K. This is just a number: how well does this candidate's resume match this job description? No commitment yet, just scoring. Second, those raw scores are passed through a softmax function, which normalises them into weights that sum to 1. This is the shortlist forming — the model decides *how much* to draw from each candidate, proportional to their score. Third, each token's Value is multiplied by its weight and the results are summed. This is the actual contribution flowing through — the weighted blend that becomes the representation used to predict the next token.
+First, every token in the context computes a raw relevance score against the current Query — the dot product of Q and K. This is just a number: how well does this candidate's resume match this job description? No commitment yet, just scoring. Second, those raw scores are passed through softmax — a formula that takes any set of numbers and squashes them into a 0-to-1 range so they all add up to 1, turning raw scores into something that behaves like percentages. This is the shortlist forming — the model decides *how much* to draw from each candidate, proportional to their score. Third, each token's Value is multiplied by its weight and the results are summed. This is the actual contribution flowing through — the weighted blend that becomes the representation used to predict the next token.
 
 Score → normalise → blend. Relevance is always computed before weights are assigned, and weights are always assigned before values flow. You cannot skip or reorder these steps — the whole mechanism depends on that sequence.
 
@@ -54,7 +54,7 @@ Every token is represented as a **list of numbers** — typically hundreds or th
 
 Every token — including the current one deciding what comes next — starts from that same embedding. The Query is simply that current token's embedding pushed through a learned transformation (W_Q), producing a new list of numbers tuned for the question *"what am I looking for?"* Every other token in the context goes through its own transformation (W_K) to produce a Key — a list tuned for *"here is what I contain."* Q and K are not separate things that appear from nowhere. They are different projections of the same underlying token embeddings, each shaped by a different learned matrix.
 
-The dot product of Q and K — multiply the two lists pairwise, sum the results — measures how **geometrically aligned** those two vectors are. How much they point in the same direction in the high-dimensional space where all embeddings live. One number comes out. That is the score.
+The dot product of Q and K — multiply the two lists pairwise, sum the results — measures how **aligned** those two vectors are. Think of each list of numbers as an arrow pointing in some direction. If two arrows point in roughly the same direction, they are aligned and the score is high. If they point in opposite directions, the score is low. The model has thousands of these directions, one per dimension in the embedding — too many to visualise, but the geometry works the same way. One number comes out of the dot product. That is the score.
 
 No understanding. No interpretation. Just: *are these two lists of numbers pointing in a similar direction?* If yes, high score — this prior token is relevant. If no, low score — mostly ignored. The model learned during training that tokens which tend to matter to each other end up with embeddings that point in similar directions. "Cat" and "sat" learned to align because they co-occurred in meaningful ways across billions of training examples. The arithmetic just measures that learned alignment on demand, for the specific tokens in front of it right now.
 
@@ -94,7 +94,7 @@ Previous tokens do not vote. They do not propose. They contribute to shaping a c
 
 ## 2 — Multiple Companies, One Pool: Multi-Head Attention
 
-A single attention head asks one question of the context. That's limiting — real language has multiple relationships happening simultaneously. "Cat" is syntactically the subject, semantically an agent, and positionally close to "sat." One question can't capture all of that at once.
+A single attention head asks one question of the context. That's limiting — real language has multiple relationships happening simultaneously. "Cat" plays several roles at once: it is the one doing the action, it is the main noun of the sentence, it was mentioned near the start, and it will likely be referenced again. One question can't capture all of those angles at once.
 
 Multi-head attention runs the entire QKV process in parallel across multiple heads — each with its own independently learned W_Q, W_K, W_V weight matrices.
 
@@ -138,7 +138,7 @@ A position vector is added to the token embedding *before* it enters the QKV pro
 
 *In the hiring analogy: a queue number gets stamped onto the resume before the company reads it. Same candidate, different stamp. The company sees a different profile.*
 
-Works well for short sequences. Struggles to generalise beyond the sequence lengths seen in training — the model has never seen position 4000 if it only trained on sequences up to 2048.
+The original approach used wave-shaped mathematical patterns — called sinusoidal functions — to generate a unique fingerprint for each position. Think of it as each seat in a concert hall having its own distinct lighting colour: no two seats look exactly the same, so you can always tell where someone is sitting. This was used in the original transformer paper and in early well-known models like BERT (Google's language understanding model) and GPT-2 (an early OpenAI text generator). It works well for short sequences but struggles when the model encounters positions it never saw during training.
 
 ### RoPE — Rotary Position Encoding (LLaMA, Mistral, Claude)
 
@@ -166,7 +166,7 @@ Once you understand the distance penalty, the next finding follows mechanically 
 
 Imagine the model generating a token at the very end of a long context. It looks back at the entire prompt. The distance penalty applies to everything:
 
-- **Tokens at the front of the prompt** — furthest away, highest penalty. But the model has strong priors toward system instruction regions. These tokens tend to be high-signal (role definition, hard constraints) and the model has learned during training to weight them. They survive the penalty.
+- **Tokens at the front of the prompt** — furthest away, highest penalty. But the model has learned through training to pay special attention to the opening of a prompt, where instructions typically live. These tokens tend to be high-signal — role definitions, hard constraints, output format rules — and that learned habit is strong enough to survive the distance penalty.
 - **Tokens at the end of the prompt** — closest to the generation point, lowest distance penalty. Recency works in their favour. They score well almost automatically.
 - **Tokens in the middle** — penalised from both ends. Not close enough for recency to save them. Not high-signal enough (usually) for trained priors to rescue them. They fall into the valley.
 
@@ -210,7 +210,7 @@ Understanding the mechanics translates directly into better prompt construction:
 
 **Shorter prompts attend more uniformly.** The U-shaped valley deepens with context length. A focused, tight prompt with less middle has less information loss than a long sprawling one. Don't pad context — every extra token makes the middle worse.
 
-**RAG as a structural fix.** Retrieval-augmented generation addresses the root cause rather than working around it. Instead of placing all potentially relevant context in the prompt and hoping the model finds it, RAG retrieves the specific chunks that are relevant to the current query and places them near the generation boundary. It pulls the right candidates to the top of the pile rather than leaving them at position 4000. The model attends to what it needs, not what happened to survive the distance penalty.
+**RAG as a structural fix.** RAG stands for Retrieval-Augmented Generation. Instead of stuffing all potentially relevant context into the prompt upfront and hoping the model finds the right piece, RAG works differently: it searches a database for only the specific chunks relevant to the current query and injects just those into the prompt at the moment they are needed. The prompt stays short, the relevant content lands close to the generation point, and the distance penalty never gets a chance to bury it. It addresses the root cause rather than working around it — rather than leaving the right candidate at position 4000 and hoping it survives, RAG brings it to the front of the pile.
 
 ---
 
