@@ -387,6 +387,83 @@ GenStack occupies a largely empty cell: **agentic code modification where the mo
 
 ---
 
+## Closing the Gaps: A Roadmap
+
+### Gap 1: No IDE Integration
+**Current state:** GenStack is a web app / API server. Users interact through a browser chat interface.
+
+**How to close it:**
+- **VS Code extension** — expose GenStack's AST API over LSP (Language Server Protocol). The extension becomes a thin client; all AST parsing and modification happens server-side. This is the same architecture Continue.dev uses.
+- **Language Server** — implement a subset of LSP so any editor (Neovim, Zed, JetBrains) can connect without a bespoke plugin.
+- **MCP server** — GenStack already has an MCP layer (`services/mcp_tools.py`). Exposing it as a proper MCP server means any MCP-capable client (Claude Code, Cline, Goose) can call GenStack's AST tools directly. This is the lowest-effort path and leverages existing code.
+
+**Effort:** MCP exposure = low (days). Full VS Code extension = medium (weeks).
+
+---
+
+### Gap 2: Limited to Generated Projects
+**Current state:** Only projects GenStack created can be modified via AST. Importing an arbitrary existing codebase isn't supported.
+
+**How to close it:**
+- **Import endpoint** — `POST /api/projects/import` accepts a zip, git URL, or directory path. Runs the same Tree-sitter indexing pipeline used on generated projects.
+- **Git clone integration** — accept a GitHub/GitLab URL, clone to `generated_projects/`, index with Tree-sitter. The rest of the pipeline is identical.
+- **Incremental indexing** — watch for file changes (via `watchdog` or inotify) and re-parse only modified files. This keeps the AST cache live for projects the user edits outside GenStack.
+
+**Effort:** Basic import = low (days). Incremental watch = medium.
+
+---
+
+### Gap 3: AST Modification is Hard (Write Path)
+**Current state:** Tree-sitter is excellent for parsing and querying (read). The write path — modifying the AST and regenerating valid source — is the hardest engineering problem in the stack.
+
+**How to close it:**
+- **Recast pattern** — instead of full AST-to-text regeneration, use a CST-aware reprinter: track which nodes were modified, reuse original source text for untouched nodes (preserving formatting, comments), and only reprint changed subtrees. This is how Facebook's `recast` library works for JS.
+- **Tree-sitter + concrete positions** — Tree-sitter nodes carry byte offsets into the original source. A targeted edit can splice the new node's text into the original source at the exact byte range of the replaced node, without reprinting anything else.
+- **LibCST for Python** — for Python specifically, LibCST preserves whitespace and comments through round-trips and is already production-proven.
+- **Structured patch format** — define a JSON patch schema (operation, target node selector, replacement AST) that is deterministic and replayable. The LLM emits patches; a separate renderer applies them. Separates the "what to change" (LLM) from "how to change it" (deterministic engine).
+
+**Effort:** Splice-based edit (using Tree-sitter byte offsets) = medium (weeks). Full CST round-trip = high (months, language by language).
+
+---
+
+### Gap 4: No Repo-Wide Symbol Graph
+**Current state:** Files are parsed on demand. There's no persistent cross-file index of where symbols are defined and used.
+
+**How to close it:**
+- **Build-time index** — after project generation, walk all files and extract a symbol table: `{ symbolName → [file, line, node_type] }`. Store in MySQL or a simple SQLite file alongside the project.
+- **Tree-sitter queries for cross-file resolution** — write language-specific Tree-sitter queries that extract `export` declarations and `import` references. Match them to build a dependency graph.
+- **Sourcegraph SCIP** — SCIP (Sourcegraph Code Intelligence Protocol) is an open format for precise symbol indexes. Several language indexers already emit SCIP. GenStack could consume SCIP indexes to get production-grade cross-file resolution without building it from scratch.
+- **Incremental update** — when a file changes, re-index only that file and update its edges in the graph.
+
+**Effort:** Basic symbol table = low-medium. Full cross-file graph = medium-high. SCIP integration = medium (depends on language support).
+
+---
+
+### Gap 5: Benchmark Coverage
+**Current state:** SWE-bench, HumanEval, and similar benchmarks are designed around text-edit agents. AST-based approaches aren't represented.
+
+**How to close it:**
+- **Run GenStack on SWE-bench** — SWE-bench provides real GitHub issues + test suites. Running GenStack's AST modification pipeline on these gives an apples-to-apples comparison with Aider, SWE-agent, etc.
+- **Define AST-specific benchmarks** — tasks that are *hard* for text-edit agents (safe rename across 50 files, extract function preserving all call sites, add parameter to all usages) but tractable for AST tools. Publishing these benchmarks would position GenStack as defining the evaluation category.
+- **Instrument existing tests** — GenStack already has a test suite. Adding metrics for edit precision (did the change touch only the intended nodes?) and syntactic validity rate (% of edits that produce parseable output) gives internal benchmarks.
+
+**Effort:** SWE-bench integration = medium. Custom benchmark suite = medium-high.
+
+---
+
+### Priority Order
+
+| Gap | Impact | Effort | Priority |
+|---|---|---|---|
+| MCP server exposure (IDE gap shortcut) | High — unlocks all MCP clients immediately | Low | **1** |
+| Splice-based AST write (byte offset edit) | High — makes the core differentiator reliable | Medium | **2** |
+| Project import / git clone | Medium — widens addressable use cases | Low-Medium | **3** |
+| Basic symbol table (cross-file index) | Medium — enables rename/find-usages across files | Medium | **4** |
+| VS Code extension | High UX — but requires MCP path first | Medium | **5** |
+| SWE-bench run | Positioning / credibility | Medium | **6** |
+
+---
+
 ## Key Takeaway
 
 The industry has converged on two patterns: *LLM outputs text → apply text patch* (Copilot, Cursor, Aider) and *LLM calls file-write tool → overwrite file* (Cline, OpenHands). Both treat the LLM as the source of code text.
