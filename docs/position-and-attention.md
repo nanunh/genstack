@@ -1,6 +1,6 @@
-# How AI Models Read Your Prompt — Attention, Position, and Why the Middle Gets Ignored
+# How Language Models Actually Work: The Foundation for Understanding AI Code Generation
 
-> A ground-up explanation of how transformers decide which parts of your input to pay attention to, why token position changes that decision, and what happens to information placed in the middle of a long context.
+> A ground-up explanation of how transformers predict the next token, how they decide which parts of the context to pay attention to, and why that mechanism determines whether your prompt instructions get followed or silently ignored.
 
 ---
 
@@ -16,11 +16,13 @@ If everything is read at once with equal weight, word order disappears. "The cat
 
 Before anything else: a transformer is a **next-token predictor**. That is its entire job. Given every token that has come before — the full prompt, plus anything it has already generated — it predicts the single most likely next token. Then it appends that token and predicts the next one. Then the next. One token at a time, left to right, until the response is complete. Everything else — the layers, the heads, the weight matrices — is machinery in service of making that one prediction well.
 
-So the question attention is answering at every step is: *given everything I have seen so far, what single token should come next?* To answer that well, the model needs to know which of the thousands of tokens in its context are actually relevant to that decision — and which are noise.
+So the question at every step is: *given everything before this point, which single token should come next?*
 
-When the model is about to produce the next word, it doesn't just look at the last word. It looks back at *everything* — every word in the prompt, every word it has already generated — and asks a simple question for each one: *is this relevant to what I'm about to say?*
+Start with this: the empty slot after "the cat sat on the" could be filled by any of the ~100,000 words the model knows. Mat. Dog. Parrot. Democracy. Semicolon. Every single one of them is always a candidate — the model never pre-selects or shortlists. The full vocabulary is always in play.
 
-Some words will be very relevant. Some won't matter at all. The model scores every one of them and decides how much weight to give each before making its next prediction. When generating the word after "the cat sat on the", it finds that "cat", "sat", and "on" score high — and the three instances of "the" are mostly noise. It leans heavily on the relevant ones and barely touches the rest.
+Here is how the winner emerges. The model looks back at all the previous words and leans on the ones that matter — "cat", "sat", "on" score high, the three instances of "the" are mostly noise. From that selective leaning it builds a picture of what the context means: *something a cat sat on, a surface, a location*. It then takes that picture and compares it against all 100,000 possible next words simultaneously. Whichever word's meaning is most aligned with that picture scores highest. This time it's "mat." That becomes the next token.
+
+The direction matters: the context builds a picture first, then scores the vocabulary. The leaning goes *context → vocabulary*, not the other way around. The model does not look at each possible next word and ask "does this fit?" It builds a context summary and asks "what does this summary point toward?"
 
 That selective leaning — done fresh for every single token the model generates, across every token in the context — is attention.
 
@@ -158,7 +160,7 @@ The consequence across all three approaches is the same: **the further back in t
 
 ---
 
-## 5 — The U-Shaped Shortlist
+## 5 — Attention, Position, and Why the Middle Gets Ignored
 
 Once you understand the distance penalty, the next finding follows mechanically — no experiment needed to predict it.
 

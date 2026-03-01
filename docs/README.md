@@ -22,7 +22,7 @@ If you are new to this codebase — or new to AI-powered code generation as a di
 ## Documents
 
 ### [position-and-attention.md](./position-and-attention.md)
-**Why token position determines whether the model uses your information** — how transformers read context, why attention works through selective leaning, and why information in the middle of a long prompt gets systematically ignored.
+**The foundational mechanics of how language models work** — how transformers predict the next token, how attention decides which context to lean on, and why that mechanism determines whether your prompt instructions get followed or silently ignored.
 
 Covers: the parallel processing problem, attention and QKV mechanics (with the hiring pool analogy), multi-head attention as multiple companies reading one candidate pool, the invisible position problem, positional encoding approaches (absolute, RoPE, ALiBi), the U-shaped attention curve, the *Lost in the Middle* paper (Liu et al., 2023), and practical prompt design implications.
 
