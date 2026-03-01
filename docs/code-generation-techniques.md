@@ -129,6 +129,32 @@ Think of it as casting molten metal. The metal is still molten — the model is 
 
 The model's weights don't change between requests. The only thing you control is what you put in the context window. This layer is about making that context do real work.
 
+To understand why context has the power it does, it helps to look at the mechanism underneath.
+
+**Fixed weights, dynamic activations.** Training freezes the weight matrices — `W_Q`, `W_K`, `W_V` — permanently. What changes per request is the *activations*: the actual numbers that flow through the network when your specific input is processed. Your prompt doesn't change the model. It changes what the model *computes*. Those two things feel the same from the outside but are mechanically very different. The weights are the instrument; the prompt is the score.
+
+**How attention reads your context.** For every token the model is about to generate, it runs an attention computation over every prior token in the context — prompt and generated tokens alike. The mechanism works through three roles each token plays:
+
+- **Query** — the current position asks: *what am I looking for?*
+- **Key** — each prior token offers: *here is what I contain*
+- **Value** — each prior token says: *if you select me, here is what I contribute*
+
+The dot product of the Query and each Key produces a score. Softmax normalises those scores into weights. The Values are then mixed in proportion to those weights. The result is a representation of the current position that is a weighted blend of everything relevant in the context. High score = that prior token strongly shapes the next prediction.
+
+**Multi-head attention — multiple lenses on the same context.** This computation runs in parallel across multiple attention heads, each with its own set of learned weight matrices. One head might learn to track syntactic relationships, another semantic ones, another long-range dependencies between function definitions and call sites. Their outputs are concatenated and projected back down. The model gets a richer, multi-dimensional view of the context than any single lens could produce.
+
+**What this means for your prompt.** Every token you write becomes a Key and a Value. When the model generates output, it is attending over all of them simultaneously. A constraint like "do not use React" doesn't get *read* the way a human reads it — it becomes a pattern in the Key-Value space that, through learned attention weights, suppresses React-related token sequences downstream. You are not writing instructions. You are placing tokens that participate in the attention computation for every token that follows.
+
+**Why constraints at the end of the prompt are more effective.** This comes down to two separate effects that compound.
+
+The first is *recency bias in attention scores*. Positional encodings — the mechanism that tells the model where each token sits in the sequence — introduce a distance penalty into the dot product computation. When the model issues a Query from the generation boundary, tokens nearby produce naturally higher Key scores than tokens far back in the prompt. A constraint buried 2000 tokens into a long system prompt is fighting a positional penalty every time the model attends to it. A constraint near the end is close to the query, scores higher, and is more reliably weighted.
+
+This is empirically well-documented. A 2023 paper titled *"Lost in the Middle"* showed that LLMs consistently under-utilise information placed in the middle of long contexts. The opening of a prompt gets attended to because the model has strong priors toward the system instruction region. The end gets attended to due to recency. The middle is where information gets lost.
+
+The second effect lives in the *depth* dimension, not the position dimension, and this is where your intuition about "decisive heads" is pointing at something real. Earlier transformer layers aggregate broad context — they're gathering. Later layers, closer to the output logits, are more selective and task-focused — they're deciding. Every token in the sequence passes through all layers equally, so this isn't about end-of-prompt tokens reaching more decisive layers. What it means is that the *query for generation* — which is resolved in those deeper, decisive layers — is strongly shaped by whichever Keys scored highest in the earlier layers. Recency bias upstream means end-of-prompt constraints arrive at the decisive layers already weighted heavily. The two effects are on different axes but they amplify each other.
+
+The practical implication: put your hard constraints — output schema, explicit prohibitions, technology stack — toward the end of the system prompt, close to where generation begins.
+
 **Why the prompt and not mid-stream corrections?** Mid-stream steering does exist — you can bias logits at specific steps, force-inject tokens into the sequence, or stop generation mid-way, append new context, and restart. Token injection works like grabbing the wheel briefly: you force `authenticate` instead of `auth` at the exact step it's about to diverge, and the model conditions all future tokens on your correction. Stop-inject-restart is the coarser version — stop after the plan is generated, inspect it, inject a correction ("actually Postgres not MySQL"), and resume. This is essentially what multi-turn chat does.
 
 But the fundamental constraint is that the model is autoregressive — it only looks *backward*, never forward. It can't revise tokens it has already emitted. Each token becomes permanent context the moment it's sampled. You can steer what's *coming* but you can't undo the wake. Mid-stream corrections are either coarse (stop and re-prompt) or require knowing exactly which token to intercept before it fires — which for open-ended generation is hard to predict.
