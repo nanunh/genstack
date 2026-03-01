@@ -37,6 +37,15 @@ Covers: what an AST is, the compilation pipeline (lexing → parsing → AST), a
 
 ---
 
+### [code-generation-techniques.md](./code-generation-techniques.md)
+**How code is actually generated** — a layered walkthrough of the techniques that power AI code generation, from transformer next-token prediction up to AST-guided modification.
+
+Covers: next-token prediction and temperature, decoding strategies (greedy/beam/grammar-constrained), structured output and JSON schema enforcement, prompt engineering as a context contract, plan-then-execute as an IR pattern, AST-guided surgical modification. Each layer explains the failure mode of the previous one and why the next layer exists.
+
+*~15 min read.*
+
+---
+
 ### [coding-tools-landscape.md](./coding-tools-landscape.md)
 **Competitive landscape and positioning** — a survey of AI coding tools and where GenStack fits.
 
@@ -54,6 +63,7 @@ Covers: analysis of 18 tools (Copilot, Cursor, Windsurf, Amazon Q, Tabnine, JetB
 | Understand the code assistant | [code-generation.md § Code Assistant](./code-generation.md#3-code-assistant--intent-detection) |
 | Understand the AST layer | [code-generation.md § AST System](./code-generation.md#4-ast-system) |
 | Learn what an AST is | [ast-intro.md](./ast-intro.md) |
+| Understand how code generation techniques work | [code-generation-techniques.md](./code-generation-techniques.md) |
 | See how GenStack compares to Cursor / Aider / Copilot | [coding-tools-landscape.md](./coding-tools-landscape.md) |
 | See the product roadmap | [coding-tools-landscape.md § Closing the Gaps](./coding-tools-landscape.md#closing-the-gaps-a-roadmap) |
 | Set up the project locally | [overview.md § Getting Started](./overview.md#getting-started) |
