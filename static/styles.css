@@ -1,6 +1,6 @@
 /* ===========================
    Modern Emerald & Amber Theme
-   FullStack Premium Design
+   genStack Premium Design
    =========================== */
 
 /* CSS Variables */
@@ -13,7 +13,7 @@
     --secondary-dark: #d97706;
     --accent: #ec4899;
     --danger: #ef4444;
-    
+
     /* Neutrals */
     --gray-50: #f9fafb;
     --gray-100: #f3f4f6;
@@ -25,6 +25,14 @@
     --gray-700: #374151;
     --gray-800: #1f2937;
     --gray-900: #111827;
+
+    /* Theme — dark (default) */
+    --bg-body: #064e3b;
+    --bg-body-gradient-a: rgba(16, 185, 129, 0.08);
+    --bg-body-gradient-b: rgba(245, 158, 11, 0.08);
+    --bg-card: rgba(255, 255, 255, 0.98);
+    --bg-navbar: rgba(255, 255, 255, 0.95);
+    --bg-footer: rgba(255, 255, 255, 0.95);
     
     /* Spacing */
     --spacing-xs: 0.25rem;
@@ -52,6 +60,40 @@
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* ===========================
+   Light Theme Override
+   =========================== */
+html.theme-light {
+    --bg-body: #f1f5f9;
+    --bg-body-gradient-a: rgba(16, 185, 129, 0.05);
+    --bg-body-gradient-b: rgba(245, 158, 11, 0.05);
+    --bg-card: rgba(255, 255, 255, 1);
+    --bg-navbar: rgba(255, 255, 255, 1);
+    --bg-footer: rgba(255, 255, 255, 1);
+}
+
+/* Theme Toggle Button */
+.theme-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border: 2px solid var(--gray-200);
+    background: white;
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+
+.theme-toggle-btn:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.2);
+}
+
 /* Reset & Base Styles */
 * {
     margin: 0;
@@ -61,7 +103,7 @@
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #064e3b;
+    background: var(--bg-body);
     background-attachment: fixed;
     color: var(--gray-900);
     line-height: 1.6;
@@ -70,6 +112,7 @@ body {
     position: relative;
     margin: 0;
     padding: 0;
+    transition: background 0.3s ease, color 0.3s ease;
 }
 
 body::before {
@@ -79,9 +122,9 @@ body::before {
     left: 0;
     right: 0;
     bottom: 0;
-    background: 
-        radial-gradient(circle at 20% 50%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(245, 158, 11, 0.08) 0%, transparent 50%);
+    background:
+        radial-gradient(circle at 20% 50%, var(--bg-body-gradient-a) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, var(--bg-body-gradient-b) 0%, transparent 50%);
     pointer-events: none;
     z-index: 0;
 }
@@ -90,7 +133,7 @@ body::before {
    Navigation
    =========================== */
 .navbar {
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--bg-navbar);
     backdrop-filter: blur(20px) saturate(180%);
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
     position: fixed !important;
@@ -351,7 +394,7 @@ body::before {
    Cards
    =========================== */
 .card {
-    background: rgba(255, 255, 255, 0.98);
+    background: var(--bg-card);
     backdrop-filter: blur(20px) saturate(180%);
     border-radius: var(--radius-xl);
     padding: var(--spacing-xl);
@@ -1823,7 +1866,7 @@ body::before {
    Footer
    =========================== */
 .footer {
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--bg-footer);
     backdrop-filter: blur(10px);
     padding: var(--spacing-xl);
     border-top: 1px solid var(--gray-200);

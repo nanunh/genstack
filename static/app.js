@@ -1106,7 +1106,7 @@ const UI = {
                 <div class="project-card" data-project-id="${project.project_id}">
                     <div class="project-header">
                         <h3>${project.project_name}</h3>
-                        <span class="project-mode">FullStack Generated</span>
+                        <span class="project-mode">genStack Generated</span>
                     </div>
                     
                     <div class="project-meta">
