@@ -1,8 +1,9 @@
+import asyncio
 import json
 import re
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Callable, Optional
 
 from models import FileContent, ProjectResponse
 from store import client, ANTHROPIC_API_KEY
@@ -13,12 +14,18 @@ from utils.project_runner import generate_package_json, generate_readme
 
 async def create_project_with_mcp_streaming(
     prompt: str,
-    project_name: Optional[str] = None
+    project_name: Optional[str] = None,
+    progress_callback: Optional[Callable] = None,
+    cancel_flag: Optional[dict] = None
 ) -> ProjectResponse:
     """Generate project using Anthropic API with MCP tools - WITH TOKEN TRACKING"""
 
     if not client:
         raise Exception("Anthropic API client not initialized. Please set ANTHROPIC_API_KEY environment variable.")
+
+    async def emit(event: dict):
+        if progress_callback:
+            await progress_callback(event)
 
     mcp_system_prompt = f"""You are an expert software engineer and UI/UX designer with access to MCP tools for DYNAMIC CODE GENERATION.
 
@@ -80,33 +87,42 @@ Response format (JSON only):
     print("[DEBUG] Making MCP-enabled streaming API call with token tracking...")
 
     try:
-        response_content = ""
+        loop = asyncio.get_event_loop()
         input_tokens = 0
         output_tokens = 0
 
-        with client.messages.stream(
-            model="claude-sonnet-4-5-20250929",
-            max_tokens=50000,
-            temperature=0.1,
-            system=mcp_system_prompt,
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"Create a complete, production-ready project for: {prompt}\n\nUse MCP tools to build the project structure systematically."
-                }
-            ]
-        ) as stream:
-            for text in stream.text_stream:
-                response_content += text
-                print(text, end='', flush=True)
+        def run_claude_stream():
+            """Run the synchronous Claude API stream in a thread pool."""
+            content = ""
+            with client.messages.stream(
+                model="claude-sonnet-4-5-20250929",
+                max_tokens=50000,
+                temperature=0.1,
+                system=mcp_system_prompt,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"Create a complete, production-ready project for: {prompt}\n\nUse MCP tools to build the project structure systematically."
+                    }
+                ]
+            ) as stream:
+                for text in stream.text_stream:
+                    content += text
+                    print(text, end='', flush=True)
+                    if progress_callback:
+                        asyncio.run_coroutine_threadsafe(
+                            progress_callback({"type": "token", "text": text}),
+                            loop
+                        )
+                final_message = stream.get_final_message()
+                _in, _out = extract_token_usage(final_message)
+            return content, _in, _out
 
-            final_message = stream.get_final_message()
-            input_tokens, output_tokens = extract_token_usage(final_message)
+        response_content, input_tokens, output_tokens = await loop.run_in_executor(None, run_claude_stream)
 
-            if input_tokens > 0 or output_tokens > 0:
-                print(f"\n[TOKEN USAGE] Input: {input_tokens}, Output: {output_tokens}, Total: {input_tokens + output_tokens}")
-            else:
-                print(f"\n[DEBUG] Token usage not available in response")
+        if input_tokens > 0 or output_tokens > 0:
+            print(f"\n[TOKEN USAGE] Input: {input_tokens}, Output: {output_tokens}, Total: {input_tokens + output_tokens}")
+            await emit({"type": "progress", "tokens": input_tokens + output_tokens})
 
         print(f"\n[DEBUG] Got streaming response, length: {len(response_content)}")
 
@@ -122,12 +138,18 @@ Response format (JSON only):
                 raise ValueError("No JSON found in response")
 
         project_plan = json.loads(json_content)
-        print(f"[DEBUG] Parsed project plan: {len(project_plan.get('mcp_calls', []))} MCP calls")
+        mcp_calls = project_plan.get("mcp_calls", [])
+        total_calls = len(mcp_calls)
+        print(f"[DEBUG] Parsed project plan: {total_calls} MCP calls")
 
         files = []
         dependencies = {"npm": [], "pip": []}
+        file_count = 0
 
-        for call in project_plan.get("mcp_calls", []):
+        for call in mcp_calls:
+            if cancel_flag and cancel_flag.get("cancelled"):
+                raise Exception("Generation cancelled by user")
+
             tool_name = call["tool"]
             parameters = call["parameters"]
             reasoning = call.get("reasoning", "")
@@ -138,6 +160,7 @@ Response format (JSON only):
                 result = await execute_mcp_tool(tool_name, parameters)
 
                 if result["type"] == "file_created":
+                    file_count += 1
                     files.append(FileContent(
                         path=result["path"],
                         content=result["content"],
@@ -185,7 +208,7 @@ Response format (JSON only):
             project_id=project_id,
             project_name=final_project_name,
             files=files,
-            instructions=project_plan.get("instructions", f"Project created with {len(project_plan.get('mcp_calls', []))} MCP tool calls"),
+            instructions=project_plan.get("instructions", f"Project created with {total_calls} MCP tool calls"),
             created_at=created_at,
             token_usage={
                 'input_tokens': input_tokens,
@@ -200,7 +223,7 @@ Response format (JSON only):
 
     except Exception as e:
         print(f"[DEBUG] MCP project generation failed: {e}")
-        raise Exception(f"Failed to generate project with MCP tools: {str(e)}")
+        raise
 
 
 async def create_project_from_files_streaming(

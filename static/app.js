@@ -956,6 +956,24 @@ const UI = {
                 </div>
             ` : '';
             
+            const tu = data.token_usage;
+            const tokenChips = tu ? `
+                        <div class="result-chip result-chip--tokens">
+                            <span class="result-chip-icon">⬆️</span>
+                            <span class="result-chip-label">Input</span>
+                            <span class="result-chip-value">${tu.input_tokens.toLocaleString()}</span>
+                        </div>
+                        <div class="result-chip result-chip--tokens">
+                            <span class="result-chip-icon">⬇️</span>
+                            <span class="result-chip-label">Output</span>
+                            <span class="result-chip-value">${tu.output_tokens.toLocaleString()}</span>
+                        </div>
+                        <div class="result-chip result-chip--tokens">
+                            <span class="result-chip-icon">🔢</span>
+                            <span class="result-chip-label">Total</span>
+                            <span class="result-chip-value">${tu.total_tokens.toLocaleString()}</span>
+                        </div>` : '';
+
             elements.result.innerHTML = `
                 <div class="result-card">
                     <div class="result-card-header">
@@ -985,6 +1003,7 @@ const UI = {
                             <span class="result-chip-label">Created</span>
                             <span class="result-chip-value">${new Date(data.created_at).toLocaleString()}</span>
                         </div>
+                        ${tokenChips}
                     </div>
 
                     <div class="result-card-actions project-actions">
@@ -1195,17 +1214,6 @@ const UI = {
     }
 };
 
-const originalShowResult = UI.showResult;
-UI.showResult = function(data, type, mode = 'text') {
-    // Call original function
-    originalShowResult.call(this, data, type, mode);
-    
-    // Add token usage display if available
-    if (type === 'success' && data.token_usage) {
-        const resultContainer = elements.result;
-        TokenUI.displayTokenUsageInResult(data.token_usage, resultContainer);
-    }
-};
 
 const ProjectManager = {
     async loadProjects() {
@@ -2210,36 +2218,189 @@ ProjectManager.deployProject = function(projectId) {
     DeploymentManager.deployProject(projectId);
 };
 
+const ProgressTracker = {
+    eventSource: null,
+    taskId: null,
+    _resolve: null,
+    _reject: null,
+
+    STEPS: [
+        { n: 1, label: 'Analyzing prompt' },
+        { n: 2, label: 'Planning with Claude' },
+        { n: 3, label: 'Generating files' },
+        { n: 4, label: 'Saving project' },
+        { n: 5, label: 'Project ready' }
+    ],
+
+    start(prompt, projectName, autoRun) {
+        this.taskId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+        this._renderUI();
+
+        return new Promise((resolve, reject) => {
+            this._resolve = resolve;
+            this._reject = reject;
+
+            const params = new URLSearchParams({
+                prompt,
+                project_name: projectName || '',
+                auto_run: autoRun.toString(),
+                task_id: this.taskId
+            });
+
+            this.eventSource = new EventSource(`/api/generate/stream?${params}`);
+
+            this.eventSource.onmessage = (e) => {
+                try { this._handleEvent(JSON.parse(e.data)); }
+                catch (err) { console.error('ProgressTracker parse error:', err); }
+            };
+
+            this.eventSource.onerror = () => {
+                if (this._completed) return; // stream closed normally after complete event
+                this._close();
+                reject(new Error('Connection lost during generation. Please try again.'));
+            };
+        });
+    },
+
+    _renderUI() {
+        elements.loading.style.display = 'block';
+        elements.result.style.display = 'none';
+        elements.loading.innerHTML = `
+            <div class="ls-panel">
+                <div class="ls-titlebar">
+                    <span class="ls-dot ls-red"></span>
+                    <span class="ls-dot ls-yellow"></span>
+                    <span class="ls-dot ls-green"></span>
+                    <span class="ls-label">Agent is generating your project&hellip;</span>
+                    <span class="ls-tokens" id="lsTokens"></span>
+                    <button class="ls-cancel" onclick="ProgressTracker.cancel()">✕ Cancel</button>
+                </div>
+                <pre class="ls-output" id="lsOutput"><span class="ls-cursor">▊</span></pre>
+                <div class="ls-status" id="lsStatus"></div>
+            </div>
+        `;
+    },
+
+    _appendText(text) {
+        const out = document.getElementById('lsOutput');
+        if (!out) return;
+        const cursor = out.querySelector('.ls-cursor');
+        if (cursor) cursor.remove();
+        out.appendChild(document.createTextNode(text));
+        const c = document.createElement('span');
+        c.className = 'ls-cursor';
+        c.textContent = '▊';
+        out.appendChild(c);
+        out.scrollTop = out.scrollHeight;
+    },
+
+    _setStatus(text) {
+        const el = document.getElementById('lsStatus');
+        if (el) el.textContent = text;
+    },
+
+    _handleEvent(data) {
+        switch (data.type) {
+            case 'connected': break;
+            case 'token':
+                this._appendText(data.text);
+                break;
+            case 'progress':
+                if (data.tokens != null) {
+                    const el = document.getElementById('lsTokens');
+                    if (el) el.textContent = `${Number(data.tokens).toLocaleString()} tokens`;
+                }
+                break;
+            case 'complete':
+                this._completed = true;
+                this._setStatus('✓ Project saved — loading result…');
+                setTimeout(() => {
+                    this._close();
+                    if (this._resolve) this._resolve(data.project);
+                }, 400);
+                break;
+            case 'error':
+                this._close();
+                if (this._reject) this._reject(new Error(data.message || 'Generation failed'));
+                break;
+            case 'cancelled':
+                this._close();
+                if (this._reject) this._reject(new Error('Generation cancelled'));
+                break;
+        }
+    },
+
+    cancel() {
+        if (this.taskId) {
+            fetch(`/api/generate/cancel/${this.taskId}`, { method: 'DELETE' }).catch(() => {});
+        }
+        this._close();
+        elements.loading.style.display = 'none';
+        AppState.isLoading = false;
+        elements.generateTextBtn.disabled = false;
+        elements.generateTextBtn.textContent = 'Generate Project with MCP Tools';
+        if (this._reject) {
+            const r = this._reject;
+            this._reject = null;
+            r(new Error('Generation cancelled'));
+        }
+    },
+
+    _close() {
+        if (this.eventSource) {
+            this.eventSource.close();
+            this.eventSource = null;
+        }
+    },
+
+    cleanup() {
+        this._close();
+        this._resolve = null;
+        this._reject = null;
+        this._completed = false;
+    }
+};
+
 const FormHandler = {
     async handleTextSubmit(event) {
         event.preventDefault();
-        
+
         if (AppState.isLoading) return;
-        
+
         const formData = new FormData(elements.textForm);
         const prompt = formData.get('prompt').trim();
         const projectName = formData.get('project_name').trim();
         const autoRun = formData.get('auto_run') === 'on';
-        
+
         if (!prompt) {
             alert('Please enter a project prompt');
             return;
         }
-        
-        UI.showLoading('text');
-        
+
+        AppState.isLoading = true;
+        elements.generateTextBtn.disabled = true;
+        elements.generateTextBtn.textContent = 'Generating...';
+        elements.result.style.display = 'none';
+
         try {
-            const project = await ApiService.generateProjectFromText(prompt, projectName, autoRun);
+            const project = await ProgressTracker.start(prompt, projectName, autoRun);
             UI.showResult(project, 'success', 'text');
-            
             await ProjectManager.loadProjects();
             elements.textForm.reset();
-            
         } catch (error) {
             console.error('Text generation error:', error);
-            UI.showResult({ message: error.message }, 'error', 'text');
+            if (error.message !== 'Generation cancelled') {
+                UI.showResult({ message: error.message }, 'error', 'text');
+            }
         } finally {
-            UI.hideLoading();
+            ProgressTracker.cleanup();
+            elements.loading.style.display = 'none';
+            elements.generateTextBtn.disabled = false;
+            elements.generateTextBtn.textContent = 'Generate Project with MCP Tools';
+            AppState.isLoading = false;
         }
     },
     

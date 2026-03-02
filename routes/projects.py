@@ -1,5 +1,7 @@
+import asyncio
 import json
 import os
+import uuid
 import zipfile
 from datetime import datetime
 from io import BytesIO
@@ -12,7 +14,7 @@ from models import (
     ProjectRequest, EnhancedCodeAssistantRequest, ChatMessage,
     CodeModificationRequest, CodeModificationResponse, EnhancedCodeAssistantResponse
 )
-from store import projects_store, project_chats, PROJECTS_DIR, ANTHROPIC_API_KEY, ast_processor, dynamic_ast_modifier
+from store import projects_store, project_chats, PROJECTS_DIR, ANTHROPIC_API_KEY, ast_processor, dynamic_ast_modifier, active_generations
 from auth import get_user_from_token
 from token_usage_manager import global_token_manager
 from utils.file_ops import (
@@ -396,6 +398,95 @@ async def generate_project_api(request: ProjectRequest):
     except Exception as e:
         print(f"[ERROR] Project generation failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/api/generate/stream")
+async def generate_project_stream(
+    prompt: str,
+    project_name: Optional[str] = None,
+    auto_run: bool = False,
+    task_id: Optional[str] = None
+):
+    """SSE endpoint: streams real-time progress during project generation."""
+    if not ANTHROPIC_API_KEY:
+        async def err():
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Anthropic API key not configured'})}\n\n"
+        return StreamingResponse(err(), media_type="text/event-stream")
+
+    tid = task_id or str(uuid.uuid4())
+    queue: asyncio.Queue = asyncio.Queue()
+    cancel_info: dict = {"cancelled": False}
+    active_generations[tid] = cancel_info
+
+    async def callback(event: dict):
+        await queue.put(event)
+
+    async def run_generation():
+        try:
+            project = await create_project_with_mcp_streaming(
+                prompt, project_name,
+                progress_callback=callback,
+                cancel_flag=cancel_info
+            )
+            await callback({"type": "step", "step": 4, "label": "Saving project", "status": "running"})
+            await save_project_to_filesystem(project)
+            projects_store[project.project_id] = project
+            await callback({"type": "step", "step": 4, "label": "Saving project", "status": "done"})
+            await callback({"type": "step", "step": 5, "label": "Project ready", "status": "done"})
+
+            response_data = get_project_response_data(project)
+            if project.token_usage:
+                response_data["token_usage"] = project.token_usage
+                full_usage = global_token_manager.get_project_usage(project.project_id)
+                response_data["full_token_usage"] = full_usage
+
+            await callback({"type": "complete", "project": response_data})
+        except Exception as e:
+            if cancel_info.get("cancelled"):
+                await callback({"type": "cancelled"})
+            else:
+                await callback({"type": "error", "message": str(e)})
+        finally:
+            await queue.put(None)  # sentinel to close the stream
+
+    asyncio.create_task(run_generation())
+
+    async def event_stream():
+        try:
+            yield f"data: {json.dumps({'type': 'connected', 'task_id': tid})}\n\n"
+            while True:
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=180.0)
+                except asyncio.TimeoutError:
+                    yield f"data: {json.dumps({'type': 'error', 'message': 'Generation timed out'})}\n\n"
+                    break
+                if event is None:
+                    break
+                yield f"data: {json.dumps(event)}\n\n"
+                if event.get("type") in ("complete", "error", "cancelled"):
+                    break
+        finally:
+            cancel_info["cancelled"] = True
+            active_generations.pop(tid, None)
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        }
+    )
+
+
+@router.delete("/api/generate/cancel/{task_id}")
+async def cancel_generation(task_id: str):
+    """Cancel an in-progress generation."""
+    if task_id in active_generations:
+        active_generations[task_id]["cancelled"] = True
+        return {"status": "cancelled", "task_id": task_id}
+    return {"status": "not_found", "task_id": task_id}
 
 
 @router.post("/api/generate/files")

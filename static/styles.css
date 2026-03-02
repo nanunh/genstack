@@ -915,6 +915,13 @@ body::before {
     max-width: 180px;
 }
 
+.result-chip--tokens {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+}
+.result-chip--tokens .result-chip-label { color: #16a34a; }
+.result-chip--tokens .result-chip-value { color: #15803d; }
+
 /* — Action Buttons Strip — */
 .result-card-actions {
     display: flex;
@@ -4649,4 +4656,350 @@ main {
     left: 50%;
     transform: translate(-50%, -50%);
     box-shadow: 0 8px 24px rgba(16, 185, 129, 0.1);
+}
+
+/* ===========================
+   Live Stream Terminal
+   =========================== */
+
+.ls-panel {
+    background: #0d1117;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+    margin: var(--spacing-xl) auto;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+    border: 1px solid #21262d;
+}
+
+.ls-titlebar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: #161b22;
+    border-bottom: 1px solid #21262d;
+}
+
+.ls-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.ls-red    { background: #ff5f57; }
+.ls-yellow { background: #ffbd2e; }
+.ls-green  { background: #28c840; }
+
+.ls-label {
+    flex: 1;
+    font-size: 0.75rem;
+    color: #8b949e;
+    margin-left: 6px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.ls-tokens {
+    font-size: 0.7rem;
+    color: #58a6ff;
+    font-family: 'Courier New', monospace;
+    font-variant-numeric: tabular-nums;
+}
+
+.ls-cancel {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #f85149;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    padding: 3px 10px;
+    cursor: pointer;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    transition: background 0.15s, border-color 0.15s;
+    margin-left: 8px;
+}
+
+.ls-cancel:hover {
+    background: rgba(248, 81, 73, 0.1);
+    border-color: rgba(248, 81, 73, 0.4);
+}
+
+.ls-output {
+    margin: 0;
+    padding: 16px 18px;
+    min-height: 220px;
+    max-height: 420px;
+    overflow-y: auto;
+    color: #e6edf3;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.78rem;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    word-break: break-all;
+    scrollbar-width: thin;
+    scrollbar-color: #30363d transparent;
+}
+
+.ls-output::-webkit-scrollbar { width: 6px; }
+.ls-output::-webkit-scrollbar-track { background: transparent; }
+.ls-output::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+
+@keyframes ls-blink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+}
+
+.ls-cursor {
+    color: #10b981;
+    animation: ls-blink 1s step-end infinite;
+    font-weight: 700;
+}
+
+.ls-status {
+    font-size: 0.75rem;
+    color: #3fb950;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding: 8px 18px;
+    background: #161b22;
+    border-top: 1px solid #21262d;
+    min-height: 32px;
+}
+
+/* ===========================
+   Progress Tracker (legacy, unused)
+   =========================== */
+
+@keyframes pt-spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes pt-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+@keyframes pt-bar-shine {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+}
+
+.progress-tracker {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-xl);
+    max-width: 520px;
+    margin: var(--spacing-xl) auto;
+    box-shadow: var(--shadow-lg);
+}
+
+/* Header */
+.pt-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+.pt-spinner {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 3px solid var(--gray-200);
+    border-top-color: var(--primary);
+    animation: pt-spin 0.8s linear infinite;
+}
+
+.pt-header-text {
+    flex: 1;
+}
+
+.pt-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0 0 2px;
+}
+
+.pt-subtitle {
+    font-size: 0.78rem;
+    color: var(--gray-500);
+    margin: 0;
+}
+
+/* Progress bar */
+.pt-bar-wrap {
+    height: 6px;
+    background: var(--gray-100);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    margin-bottom: var(--spacing-lg);
+}
+
+.pt-bar-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: var(--radius-full);
+    background: linear-gradient(90deg, var(--primary-dark), var(--primary), var(--primary-light), var(--primary));
+    background-size: 200% auto;
+    animation: pt-bar-shine 2s linear infinite;
+    transition: width 0.5s ease;
+}
+
+/* Steps list */
+.pt-steps {
+    list-style: none;
+    margin: 0 0 var(--spacing-lg);
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.pt-step {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-sm);
+    border-radius: var(--radius-md);
+    transition: background 0.2s;
+}
+
+.pt-step[data-status="running"] {
+    background: #f0fdf4;
+}
+
+/* Step icon circle */
+.pt-step-icon {
+    position: relative;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--gray-300);
+    background: #fff;
+    transition: border-color 0.3s, background 0.3s;
+}
+
+.pt-step[data-status="running"] .pt-step-icon {
+    border-color: var(--primary);
+    background: #ecfdf5;
+}
+
+.pt-step[data-status="done"] .pt-step-icon {
+    border-color: var(--primary);
+    background: var(--primary);
+}
+
+/* Step number — visible when pending */
+.pt-step-num {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--gray-400);
+    line-height: 1;
+    transition: opacity 0.2s;
+}
+
+.pt-step[data-status="running"] .pt-step-num,
+.pt-step[data-status="done"] .pt-step-num {
+    display: none;
+}
+
+/* Check icon — visible when done */
+.pt-step-check {
+    display: none;
+    width: 16px;
+    height: 16px;
+    color: #fff;
+    position: absolute;
+}
+
+.pt-step[data-status="done"] .pt-step-check {
+    display: block;
+}
+
+/* Spin icon — visible when running */
+.pt-step-spin {
+    display: none;
+    width: 16px;
+    height: 16px;
+    color: var(--primary);
+    position: absolute;
+    animation: pt-spin 0.9s linear infinite;
+}
+
+.pt-step[data-status="running"] .pt-step-spin {
+    display: block;
+}
+
+/* Step body */
+.pt-step-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-top: 5px;
+}
+
+.pt-step-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gray-500);
+    transition: color 0.2s;
+}
+
+.pt-step[data-status="running"] .pt-step-label {
+    color: var(--gray-900);
+}
+
+.pt-step[data-status="done"] .pt-step-label {
+    color: var(--primary-dark);
+}
+
+.pt-step-detail {
+    font-size: 0.75rem;
+    color: var(--gray-400);
+    min-height: 1em;
+    animation: pt-pulse 1.5s ease-in-out infinite;
+}
+
+.pt-step[data-status="done"] .pt-step-detail {
+    animation: none;
+}
+
+/* Footer */
+.pt-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--gray-100);
+}
+
+.pt-token-count {
+    font-size: 0.75rem;
+    color: var(--gray-400);
+    font-variant-numeric: tabular-nums;
+}
+
+.pt-cancel-btn {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--danger);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    padding: 4px 12px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.pt-cancel-btn:hover {
+    background: #fef2f2;
+    border-color: #fecaca;
 }

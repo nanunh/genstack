@@ -41,3 +41,4 @@ dynamic_ast_modifier = DynamicASTModifier()
 projects_store: Dict[str, ProjectResponse] = {}
 running_processes: dict = {}
 project_chats: Dict[str, List[ChatMessage]] = {}
+active_generations: dict = {}  # task_id -> {"cancelled": bool}
