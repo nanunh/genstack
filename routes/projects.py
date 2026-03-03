@@ -14,7 +14,7 @@ from models import (
     ProjectRequest, EnhancedCodeAssistantRequest, ChatMessage,
     CodeModificationRequest, CodeModificationResponse, EnhancedCodeAssistantResponse
 )
-from store import projects_store, project_chats, PROJECTS_DIR, ANTHROPIC_API_KEY, ast_processor, dynamic_ast_modifier, active_generations
+from store import projects_store, project_chats, PROJECTS_DIR, client as llm_client, PROVIDER as llm_provider, ast_processor, dynamic_ast_modifier, active_generations
 from auth import get_user_from_token
 from token_usage_manager import global_token_manager
 from utils.file_ops import (
@@ -362,8 +362,8 @@ async def get_chat_history_api(project_id: str, authorization: Optional[str] = H
 async def generate_project_api(request: ProjectRequest):
     """Handle text-based project generation with token usage tracking"""
     try:
-        if not ANTHROPIC_API_KEY:
-            raise HTTPException(status_code=400, detail="Anthropic API key not configured")
+        if not llm_client:
+            raise HTTPException(status_code=400, detail="No LLM provider configured. Set ANTHROPIC_API_KEY or GEMINI_API_KEY.")
 
         if request.input_mode == "text":
             if not request.prompt:
@@ -408,9 +408,9 @@ async def generate_project_stream(
     task_id: Optional[str] = None
 ):
     """SSE endpoint: streams real-time progress during project generation."""
-    if not ANTHROPIC_API_KEY:
+    if not llm_client:
         async def err():
-            yield f"data: {json.dumps({'type': 'error', 'message': 'Anthropic API key not configured'})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'message': 'No LLM provider configured. Set ANTHROPIC_API_KEY or GEMINI_API_KEY.'})}\n\n"
         return StreamingResponse(err(), media_type="text/event-stream")
 
     tid = task_id or str(uuid.uuid4())
@@ -498,8 +498,8 @@ async def generate_project_from_files(
 ):
     """Generate project from uploaded files"""
     try:
-        if not ANTHROPIC_API_KEY:
-            raise HTTPException(status_code=400, detail="Anthropic API key not configured")
+        if not llm_client:
+            raise HTTPException(status_code=400, detail="No LLM provider configured. Set ANTHROPIC_API_KEY or GEMINI_API_KEY.")
 
         if len(files) == 1 and files[0].filename.endswith('.zip'):
             files_data = await process_zip_file(files[0])
@@ -899,10 +899,11 @@ async def list_mcp_tools():
 
 @router.get("/health")
 async def health_check():
-    from store import ANTHROPIC_API_KEY, running_processes
+    from store import running_processes
     return {
         "status": "healthy",
-        "anthropic_configured": bool(ANTHROPIC_API_KEY),
+        "llm_provider": llm_provider or "none",
+        "llm_configured": bool(llm_client),
         "mcp_tools_available": len(MCP_TOOLS),
         "projects_count": len(projects_store),
         "running_processes": len(running_processes),

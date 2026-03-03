@@ -14,9 +14,13 @@ pydantic==2.9.2
 # Typing helpers
 typing-extensions==4.12.2
 
-# Anthropic API client (Claude models)
+# LLM provider clients (Anthropic and/or Gemini)
 anthropic==0.39.0
+google-generativeai>=0.8.0
 httpx<0.28.0
+
+# JSON repair — fixes malformed JSON from LLMs (unescaped quotes, literal newlines, etc.)
+json-repair>=0.30.0
 
 # SSH and SCP file transfer
 paramiko==3.5.0

@@ -6,6 +6,7 @@ Uses cached AST trees stored as JSON for fast modifications
 from typing import Dict, List, Any, Optional, Callable
 from ast_cache_manager import global_ast_cache, ASTNodeInfo, FileASTInfo
 from multiLanguageASTParser import MultiLanguageASTProcessor
+from services.llm_provider import stream_llm, get_prompt_suffix
 
 class DynamicASTModifier:
     """AST Modifier that uses dynamic JSON caching for performance"""
@@ -84,13 +85,12 @@ class DynamicASTModifier:
         
         return file_content  # Fallback to original if we can't fix it
     
-    def apply_targeted_modification_with_caching(self, 
+    def apply_targeted_modification_with_caching(self,
                                            project_id: str,
                                            project_name: str,
                                            file_path: str,
                                            file_content: str,
                                            user_message: str,
-                                           client,
                                            stream_callback: Callable[[str, str], None] = None) -> Dict[str, Any]:
         """Apply modifications using cached AST data"""
         
@@ -145,12 +145,12 @@ class DynamicASTModifier:
         # Apply modifications
         if analysis['targets']:
             return self._apply_cached_ast_modifications(
-                file_content, file_ast, analysis, user_message, client, stream
+                file_content, file_ast, analysis, user_message, stream
             )
         else:
             # No specific targets - general modification
             return self._apply_general_modification(
-                file_content, file_ast, user_message, client, stream
+                file_content, file_ast, user_message, stream
             )
         
       
@@ -209,12 +209,11 @@ class DynamicASTModifier:
         
         return targets
     
-    def _apply_cached_ast_modifications(self, 
-                                       file_content: str, 
-                                       file_ast: FileASTInfo, 
-                                       analysis: Dict[str, Any], 
+    def _apply_cached_ast_modifications(self,
+                                       file_content: str,
+                                       file_ast: FileASTInfo,
+                                       analysis: Dict[str, Any],
                                        user_message: str,
-                                       client,
                                        stream: Callable[[str, str], None]) -> Dict[str, Any]:
         """Apply modifications using cached AST information"""
         
@@ -244,7 +243,7 @@ class DynamicASTModifier:
             
             # Generate modified section
             modified_section = self._generate_section_modification_with_context(
-                original_section, target, user_message, file_ast, client, stream
+                original_section, target, user_message, file_ast, stream
             )
             
             if modified_section and modified_section.strip() != original_section.strip():
@@ -269,20 +268,19 @@ class DynamicASTModifier:
             "parser_used": f"cached_ast_{file_ast.parser_type}"
         }
     
-    def _generate_section_modification_with_context(self, 
+    def _generate_section_modification_with_context(self,
                                                    original_section: str,
                                                    target: Dict[str, Any],
                                                    user_message: str,
                                                    file_ast: FileASTInfo,
-                                                   client,
                                                    stream: Callable[[str, str], None]) -> str:
         """Generate modified section with full AST context"""
-        
+
         element = target['element']
-        
+
         # Build context from AST
         context_info = self._build_modification_context(element, file_ast)
-        
+
         system_prompt = f"""You are modifying a specific {target['type']} in {file_ast.language} code with STRICT USER INSTRUCTION ENFORCEMENT.
 
 ORIGINAL TECHNOLOGY STACK ENFORCEMENT:
@@ -312,29 +310,23 @@ ENFORCE: Use the same technologies as the original code. Do not change the tech 
 
         try:
             stream("llm_call", f"Generating modification for {target['name']} with AST context")
-            
-            response_content = ""
-            with client.messages.stream(
-                model="claude-sonnet-4-5-20250929",
+
+            response_content, _, _ = stream_llm(
+                system=system_prompt + get_prompt_suffix(),
+                messages=[{
+                    "role": "user",
+                    "content": f"Modify the {target['type']} '{target['name']}' according to this request: {user_message}"
+                }],
                 max_tokens=4000,
                 temperature=0.1,
-                system=system_prompt,
-                messages=[{
-                    "role": "user", 
-                    "content": f"Modify the {target['type']} '{target['name']}' according to this request: {user_message}"
-                }]
-            ) as stream_response:
-                for text in stream_response.text_stream:
-                    response_content += text
-                    if len(response_content) % 100 == 0:
-                        stream("llm_progress", f"Generated {len(response_content)} characters...")
-            
+            )
+
             stream("llm_complete", "Section modification complete")
-            
+
             # Extract code from response
             modified_code = self._extract_code_from_response(response_content)
             return modified_code or original_section
-            
+
         except Exception as e:
             stream("error", f"Error generating modification: {e}")
             return original_section
@@ -374,19 +366,18 @@ ENFORCE: Use the same technologies as the original code. Do not change the tech 
         
         return "\n".join(context_parts)
     
-    def _apply_general_modification(self, 
-                                   file_content: str, 
-                                   file_ast: FileASTInfo, 
+    def _apply_general_modification(self,
+                                   file_content: str,
+                                   file_ast: FileASTInfo,
                                    user_message: str,
-                                   client,
                                    stream: Callable[[str, str], None]) -> Dict[str, Any]:
         """Apply general modification with AST context"""
-        
+
         stream("general_mod", "Applying general modification with AST context")
-        
+
         # Build comprehensive context
         ast_context = self._build_file_ast_context(file_ast)
-        
+
         system_prompt = f"""You are modifying a {file_ast.language} file with STRICT TECHNOLOGY STACK ENFORCEMENT.
 
 AST ANALYSIS CONTEXT:
@@ -406,24 +397,18 @@ MODIFICATION APPROACH:
 Return the complete modified file content while maintaining the original technology choices."""
 
         try:
-            response_content = ""
-            with client.messages.stream(
-                model="claude-sonnet-4-5-20250929",
+            response_content, _, _ = stream_llm(
+                system=system_prompt + get_prompt_suffix(),
+                messages=[{
+                    "role": "user",
+                    "content": f"Original file:\n```\n{file_content}\n```\n\nUser request (with AST context): {user_message}"
+                }],
                 max_tokens=8000,
                 temperature=0.1,
-                system=system_prompt,
-                messages=[{
-                    "role": "user", 
-                    "content": f"Original file:\n```\n{file_content}\n```\n\nUser request (with AST context): {user_message}"
-                }]
-            ) as stream_response:
-                for text in stream_response.text_stream:
-                    response_content += text
-                    if len(response_content) % 200 == 0:
-                        stream("llm_progress", f"Generated {len(response_content)} characters...")
-            
+            )
+
             stream("llm_complete", "General modification complete")
-            
+
             modified_content = self._extract_code_from_response(response_content) or file_content
             
             return {

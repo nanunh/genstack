@@ -11,6 +11,23 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, asdict
 
+# Per-provider pricing ($ per token). Update if rates change.
+# Gemini rates depend on the exact model; these are approximate.
+_PROVIDER_RATES = {
+    # Claude Sonnet 4.5/4.6: $3/MTok input, $15/MTok output
+    "anthropic": {"input": 3.0 / 1_000_000, "output": 15.0 / 1_000_000},
+    # Gemini 2.5 Flash: $0.15/MTok input, $0.60/MTok output (non-thinking)
+    "gemini":    {"input": 0.15 / 1_000_000, "output": 0.60 / 1_000_000},
+}
+
+# Model-specific overrides for Gemini (applied when model name is known)
+_GEMINI_MODEL_RATES = {
+    "gemini-2.0-flash":  {"input": 0.075 / 1_000_000, "output": 0.30 / 1_000_000},
+    "gemini-2.5-flash":  {"input": 0.15  / 1_000_000, "output": 0.60 / 1_000_000},
+    "gemini-2.5-pro":    {"input": 1.25  / 1_000_000, "output": 10.0 / 1_000_000},
+}
+
+
 @dataclass
 class TokenUsage:
     """Token usage information"""
@@ -20,19 +37,34 @@ class TokenUsage:
     timestamp: float
     operation_type: str  # "project_generation", "code_assistant", "file_analysis"
     project_id: Optional[str] = None
-    model: str = "claude-sonnet-4-5-20250929"
+    model: str = ""
     cost_estimate: float = 0.0
-    
+
     def __post_init__(self):
+        # Resolve default model from active provider if not supplied
+        if not self.model:
+            try:
+                from store import DEFAULT_MODEL
+                self.model = DEFAULT_MODEL
+            except Exception:
+                self.model = "unknown"
+
         if self.cost_estimate == 0.0:
-            # Approximate cost calculation (adjust based on actual pricing)
-            # These are example rates - update with actual Claude pricing
-            input_rate = 0.003 / 1000  # $0.003 per 1K input tokens
-            output_rate = 0.015 / 1000  # $0.015 per 1K output tokens
-            
+            try:
+                from store import PROVIDER
+                rates = _PROVIDER_RATES.get(PROVIDER, _PROVIDER_RATES["anthropic"])
+                # Use model-specific Gemini rates when available
+                if PROVIDER == "gemini" and self.model:
+                    for key, model_rates in _GEMINI_MODEL_RATES.items():
+                        if self.model.startswith(key):
+                            rates = model_rates
+                            break
+            except Exception:
+                rates = _PROVIDER_RATES["anthropic"]
+
             self.cost_estimate = (
-                (self.input_tokens * input_rate) + 
-                (self.output_tokens * output_rate)
+                (self.input_tokens * rates["input"]) +
+                (self.output_tokens * rates["output"])
             )
 
 class TokenUsageManager:
@@ -80,9 +112,9 @@ class TokenUsageManager:
         except Exception as e:
             print(f"[DEBUG] Error saving token usage data: {e}")
     
-    def record_usage(self, input_tokens: int, output_tokens: int, 
+    def record_usage(self, input_tokens: int, output_tokens: int,
                     operation_type: str, project_id: Optional[str] = None,
-                    model: str = "claude-sonnet-4-5-20250929") -> TokenUsage:
+                    model: str = "") -> TokenUsage:
         """Record token usage"""
         
         usage = TokenUsage(
@@ -278,16 +310,25 @@ class TokenUsageManager:
 global_token_manager = TokenUsageManager()
 
 
-# Helper function to extract token usage from Anthropic response
+# Helper function to extract token usage from an LLM response object.
+# Handles both Anthropic and Gemini response formats.
 def extract_token_usage(response_message) -> tuple[int, int]:
-    """Extract token usage from Anthropic API response"""
+    """Extract (input_tokens, output_tokens) from an Anthropic or Gemini response."""
     try:
-        if hasattr(response_message, 'usage'):
+        # Anthropic: response.usage.input_tokens / output_tokens
+        if hasattr(response_message, "usage"):
             return (
                 response_message.usage.input_tokens,
-                response_message.usage.output_tokens
+                response_message.usage.output_tokens,
+            )
+        # Gemini: response.usage_metadata.prompt_token_count / candidates_token_count
+        if hasattr(response_message, "usage_metadata"):
+            meta = response_message.usage_metadata
+            return (
+                meta.prompt_token_count or 0,
+                meta.candidates_token_count or 0,
             )
     except Exception as e:
         print(f"[DEBUG] Could not extract token usage: {e}")
-    
-    return (0, 0)  # Fallback if usage not available
+
+    return (0, 0)

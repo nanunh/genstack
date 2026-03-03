@@ -5,11 +5,12 @@ from typing import Dict, Any, Optional, Callable
 
 from models import EnhancedCodeAssistantResponse
 from store import client, projects_store, dynamic_ast_modifier
-from token_usage_manager import global_token_manager, extract_token_usage
+from token_usage_manager import global_token_manager
 from utils.file_ops import (
     get_file_content, update_file_in_project, add_file_to_project, save_file_to_filesystem
 )
 from services.mcp_tools import MCP_TOOLS, execute_enhanced_mcp_tool
+from services.llm_provider import stream_llm, get_prompt_suffix, extract_json_from_response
 
 
 # ---------------------------------------------------------------------------
@@ -49,35 +50,22 @@ Return JSON:
     try:
         stream_output("llm_call", "Requesting file analysis from LLM...")
 
-        response_content = ""
-        with client.messages.stream(
-            model="claude-sonnet-4-5-20250929",
+        response_content, _, _ = stream_llm(
+            system="You are a code analysis expert. Return only valid JSON." + get_prompt_suffix(response_format="json"),
+            messages=[{"role": "user", "content": analysis_prompt}],
             max_tokens=3000,
             temperature=0.1,
-            system="You are a code analysis expert. Return only valid JSON.",
-            messages=[{"role": "user", "content": analysis_prompt}]
-        ) as stream_response:
-            for text in stream_response.text_stream:
-                response_content += text
-                print(text, end='', flush=True)
-                if len(response_content) % 100 == 0:
-                    stream_output("llm_chunk", f"Analysis response: {len(response_content)} chars...")
+            on_chunk=lambda text: print(text, end='', flush=True),
+            response_format="json",
+        )
 
         stream_output("llm_complete", "File analysis complete, parsing response...")
 
-        json_match = re.search(r'```json\s*\n(.*?)\n```', response_content, re.DOTALL)
-        if json_match:
-            json_content = json_match.group(1)
-        else:
-            start_idx = response_content.find('{')
-            end_idx = response_content.rfind('}') + 1
-            if start_idx != -1 and end_idx > start_idx:
-                json_content = response_content[start_idx:end_idx]
-            else:
-                stream_output("warning", "No JSON found in analysis response")
-                return {"files_to_modify": [], "new_files": []}
-
-        result = json.loads(json_content)
+        try:
+            result = extract_json_from_response(response_content)
+        except (ValueError, Exception):
+            stream_output("warning", "No JSON found in analysis response")
+            return {"files_to_modify": [], "new_files": []}
 
         files_to_modify = result.get("files_to_modify", [])
         new_files = result.get("new_files", [])
@@ -95,7 +83,6 @@ async def generate_new_file_content_with_streaming(
     file_path: str,
     user_message: str,
     reason: str,
-    client_instance,
     stream_output: Callable[[str, str], None]
 ) -> str:
     """Generate content for a new file with streaming output"""
@@ -117,19 +104,13 @@ Return ONLY the code without explanations."""
     try:
         stream_output("llm_call", f"Requesting LLM to generate {file_path}...")
 
-        response_content = ""
-        with client_instance.messages.stream(
-            model="claude-sonnet-4-5-20250929",
+        response_content, _, _ = stream_llm(
+            system=system_prompt + get_prompt_suffix(),
+            messages=[{"role": "user", "content": f"Create new file {file_path}: {user_message}"}],
             max_tokens=4000,
             temperature=0.1,
-            system=system_prompt,
-            messages=[{"role": "user", "content": f"Create new file {file_path}: {user_message}"}]
-        ) as stream_response:
-            for text in stream_response.text_stream:
-                response_content += text
-                print(text, end='', flush=True)
-                if len(response_content) % 150 == 0:
-                    stream_output("llm_chunk", f"Generated {len(response_content)} chars for {file_path}...")
+            on_chunk=lambda text: print(text, end='', flush=True),
+        )
 
         stream_output("llm_complete", f"Content generation complete for {file_path}")
 
@@ -151,7 +132,6 @@ async def generate_new_file_content_with_streaming_and_tokens(
     file_path: str,
     user_message: str,
     reason: str,
-    client_instance,
     stream_output: Callable[[str, str], None]
 ) -> Dict[str, Any]:
     """Generate content for a new file with streaming output and token tracking"""
@@ -173,25 +153,13 @@ Return ONLY the code without explanations."""
     try:
         stream_output("llm_call", f"Requesting LLM to generate {file_path}...")
 
-        response_content = ""
-        input_tokens = 0
-        output_tokens = 0
-
-        with client_instance.messages.stream(
-            model="claude-sonnet-4-5-20250929",
+        response_content, input_tokens, output_tokens = stream_llm(
+            system=system_prompt + get_prompt_suffix(),
+            messages=[{"role": "user", "content": f"Create new file {file_path}: {user_message}"}],
             max_tokens=4000,
             temperature=0.1,
-            system=system_prompt,
-            messages=[{"role": "user", "content": f"Create new file {file_path}: {user_message}"}]
-        ) as stream_response:
-            for text in stream_response.text_stream:
-                response_content += text
-                print(text, end='', flush=True)
-                if len(response_content) % 150 == 0:
-                    stream_output("llm_chunk", f"Generated {len(response_content)} chars for {file_path}...")
-
-            final_message = stream_response.get_final_message()
-            input_tokens, output_tokens = extract_token_usage(final_message)
+            on_chunk=lambda text: print(text, end='', flush=True),
+        )
 
         stream_output("llm_complete", f"Content generation complete for {file_path}")
 
@@ -235,7 +203,6 @@ async def generate_mcp_style_modification_plan_with_ast(
     project,
     user_message: str,
     context: Optional[str],
-    client_instance,
     stream_output: Callable[[str, str], None],
     ast_summary: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -295,41 +262,21 @@ Response format (JSON only):
     try:
         stream_output("llm_call", "Generating MCP plan with AST guidance...")
 
-        response_content = ""
-        input_tokens = 0
-        output_tokens = 0
-
-        with client_instance.messages.stream(
-            model="claude-sonnet-4-5-20250929",
+        response_content, input_tokens, output_tokens = stream_llm(
+            system=mcp_system_prompt + get_prompt_suffix(response_format="json"),
+            messages=[{"role": "user", "content": f"Create AST-guided MCP modification plan for: {user_message}"}],
             max_tokens=8000,
             temperature=0.1,
-            system=mcp_system_prompt,
-            messages=[{"role": "user", "content": f"Create AST-guided MCP modification plan for: {user_message}"}]
-        ) as stream_response:
-            for text in stream_response.text_stream:
-                response_content += text
-                print(text, end='', flush=True)
-
-            final_message = stream_response.get_final_message()
-            input_tokens, output_tokens = extract_token_usage(final_message)
+            on_chunk=lambda text: print(text, end='', flush=True),
+            response_format="json",
+        )
 
         stream_output("llm_complete", "AST-guided MCP plan generation complete")
 
         if input_tokens > 0 or output_tokens > 0:
             stream_output("token_usage", f"Planning phase: {input_tokens} input + {output_tokens} output = {input_tokens + output_tokens} total tokens")
 
-        json_match = re.search(r'```json\s*\n(.*?)\n```', response_content, re.DOTALL)
-        if json_match:
-            json_content = json_match.group(1)
-        else:
-            start_idx = response_content.find('{')
-            end_idx = response_content.rfind('}') + 1
-            if start_idx != -1 and end_idx > start_idx:
-                json_content = response_content[start_idx:end_idx]
-            else:
-                raise ValueError("No JSON found in AST-guided MCP plan response")
-
-        mcp_plan = json.loads(json_content)
+        mcp_plan = extract_json_from_response(response_content)
 
         mcp_plan["token_usage"] = {
             "input_tokens": input_tokens,
@@ -389,16 +336,12 @@ INSTRUCTIONS:
 Answer the user's question about this project:"""
 
     try:
-        response_content = ""
-        with client.messages.stream(
-            model="claude-sonnet-4-5-20250929",
+        response_content, _, _ = stream_llm(
+            system="You are a helpful project analyst providing information and explanations about code projects. You explain what projects do, how they work, and their structure. You do not make code changes.",
+            messages=[{"role": "user", "content": information_prompt + "\n\n" + user_message}],
             max_tokens=2000,
             temperature=0.2,
-            system="You are a helpful project analyst providing information and explanations about code projects. You explain what projects do, how they work, and their structure. You do not make code changes.",
-            messages=[{"role": "user", "content": information_prompt + "\n\n" + user_message}]
-        ) as stream_response:
-            for text in stream_response.text_stream:
-                response_content += text
+        )
 
         return {
             "success": True,
@@ -440,7 +383,7 @@ async def detect_user_intent_and_respond(
     """Detect if user wants information/explanation vs code modification"""
 
     if not client:
-        raise Exception("Anthropic API client not initialized")
+        raise Exception("No LLM provider configured. Set ANTHROPIC_API_KEY or GEMINI_API_KEY.")
 
     if project_id not in projects_store:
         raise ValueError(f"Project {project_id} not found")
@@ -471,16 +414,12 @@ Respond with exactly one word: either "INFORMATION" or "CODE_MODIFICATION"
 """
 
     try:
-        response_content = ""
-        with client.messages.stream(
-            model="claude-sonnet-4-5-20250929",
+        response_content, _, _ = stream_llm(
+            system="You are an intent classifier. Respond with exactly one word: INFORMATION or CODE_MODIFICATION",
+            messages=[{"role": "user", "content": intent_detection_prompt}],
             max_tokens=50,
             temperature=0.1,
-            system="You are an intent classifier. Respond with exactly one word: INFORMATION or CODE_MODIFICATION",
-            messages=[{"role": "user", "content": intent_detection_prompt}]
-        ) as stream_response:
-            for text in stream_response.text_stream:
-                response_content += text
+        )
 
         intent = response_content.strip().upper()
 
@@ -516,7 +455,7 @@ async def process_intelligent_code_request_with_dynamic_ast(
     """Process user message with dynamic AST caching and MCP streaming - WITH TOKEN TRACKING"""
 
     if not client:
-        raise Exception("Anthropic API client not initialized")
+        raise Exception("No LLM provider configured. Set ANTHROPIC_API_KEY or GEMINI_API_KEY.")
 
     if project_id not in projects_store:
         raise ValueError(f"Project {project_id} not found")
@@ -550,7 +489,7 @@ async def process_intelligent_code_request_with_dynamic_ast(
         stream_output("ast_loaded", f"Project AST: {ast_summary['total_files']} files, {ast_summary['total_functions']} functions, {ast_summary['total_classes']} classes")
 
         mcp_plan = await generate_mcp_style_modification_plan_with_ast(
-            project, user_message, context, client, stream_output, ast_summary
+            project, user_message, context, stream_output, ast_summary
         )
 
         planning_token_usage = mcp_plan.get("token_usage", {})
@@ -572,6 +511,10 @@ async def process_intelligent_code_request_with_dynamic_ast(
         mcp_calls_made = []
 
         for mcp_call in mcp_plan.get("mcp_calls", []):
+            if not isinstance(mcp_call, dict):
+                print(f"[DEBUG] Skipping non-dict MCP call item: {type(mcp_call)} = {str(mcp_call)[:100]}")
+                continue
+
             tool_name = mcp_call["tool"]
             parameters = mcp_call["parameters"]
             reasoning = mcp_call.get("reasoning", "")
@@ -590,7 +533,6 @@ async def process_intelligent_code_request_with_dynamic_ast(
                         file_path=file_path,
                         file_content=current_content,
                         user_message=user_message,
-                        client=client,
                         stream_callback=stream_output
                     )
 
@@ -621,7 +563,7 @@ async def process_intelligent_code_request_with_dynamic_ast(
                         content = parameters["content"]
                     else:
                         content_result = await generate_new_file_content_with_streaming_and_tokens(
-                            file_path, user_message, reasoning, client, stream_output
+                            file_path, user_message, reasoning, stream_output
                         )
 
                         if isinstance(content_result, dict) and "token_usage" in content_result:

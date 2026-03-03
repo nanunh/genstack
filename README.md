@@ -1,6 +1,6 @@
-# StackGPT - AI-Powered Full-Stack Project Generator
+# genStack — AI-Powered Full-Stack Project Generator
 
-StackGPT is an open-source web application that generates complete, production-ready full-stack projects from a single text prompt. Powered by Claude (Anthropic), it uses MCP (Model Context Protocol) tool integration to intelligently create, modify, and deploy multi-language codebases.
+genStack is an open-source web application that generates complete, production-ready full-stack projects from a single text prompt. Powered by **Anthropic Claude** or **Google Gemini** (your choice), it uses MCP (Model Context Protocol) tool integration to intelligently create, modify, and deploy multi-language codebases.
 
 ---
 
@@ -39,12 +39,132 @@ Then open **https://localhost:8000** in your browser.
 
 ---
 
+## LLM Provider Setup
+
+genStack supports **Anthropic Claude** and **Google Gemini**. You only need one API key. Set the values in your `.env` file.
+
+---
+
+### Option A — Anthropic Claude
+
+Get your API key at: https://console.anthropic.com/settings/keys
+
+```env
+# .env
+ANTHROPIC_API_KEY=sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Optional: override the default model (default: claude-sonnet-4-5-20250929)
+# ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
+```
+
+genStack auto-detects Anthropic when `ANTHROPIC_API_KEY` is present.
+No `LLM_PROVIDER` line needed.
+
+**Recommended Anthropic models:**
+
+| Model | ID | Best for |
+|---|---|---|
+| Claude Sonnet 4.5 (default) | `claude-sonnet-4-5-20250929` | Best balance of quality and speed |
+| Claude Sonnet 4.6 | `claude-sonnet-4-6` | Latest, highest quality |
+| Claude Haiku 4.5 | `claude-haiku-4-5-20251001` | Faster and cheaper |
+
+To switch model, add to `.env`:
+```env
+ANTHROPIC_MODEL=claude-sonnet-4-6
+```
+
+---
+
+### Option B — Google Gemini
+
+Get your API key at: https://aistudio.google.com/app/apikey
+
+```env
+# .env
+GEMINI_API_KEY=AIzaSy-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Optional: override the default model (default: gemini-2.0-flash)
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+genStack auto-detects Gemini when `GEMINI_API_KEY` is present (and no Anthropic key is set).
+No `LLM_PROVIDER` line needed.
+
+**Recommended Gemini models:**
+
+| Model | ID | Best for |
+|---|---|---|
+| Gemini 2.5 Flash (recommended) | `gemini-2.5-flash` | Best quality, 65K output tokens |
+| Gemini 2.0 Flash (default) | `gemini-2.0-flash` | Fast, 8K output tokens |
+| Gemini 2.5 Pro | `gemini-2.5-pro` | Highest quality |
+
+To switch model, add to `.env`:
+```env
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+> **Note:** Use `gemini-2.5-flash` or `gemini-2.5-pro` for generating larger projects. The older `gemini-2.0-flash` has an 8 192-token output limit which can truncate complex projects.
+
+---
+
+### Option C — Force a specific provider
+
+If you have both keys set, Anthropic takes priority by default.
+To override, set `LLM_PROVIDER` explicitly:
+
+```env
+# Use Anthropic even if GEMINI_API_KEY is also present
+LLM_PROVIDER=anthropic
+
+# Use Gemini even if ANTHROPIC_API_KEY is also present
+LLM_PROVIDER=gemini
+```
+
+---
+
+### Complete .env examples
+
+**Using Anthropic:**
+```env
+ANTHROPIC_API_KEY=sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+ANTHROPIC_MODEL=claude-sonnet-4-6
+
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=stackgpt_db
+DB_USER=stackgpt_user
+DB_PASSWORD=your_db_password
+```
+
+**Using Gemini:**
+```env
+GEMINI_API_KEY=AIzaSy-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+GEMINI_MODEL=gemini-2.5-flash
+LLM_PROVIDER=gemini
+
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=stackgpt_db
+DB_USER=stackgpt_user
+DB_PASSWORD=your_db_password
+```
+
+**Using both keys (Anthropic active, Gemini as fallback option):**
+```env
+ANTHROPIC_API_KEY=sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+GEMINI_API_KEY=AIzaSy-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+LLM_PROVIDER=anthropic   # switch to "gemini" any time without removing keys
+```
+
+---
+
 ## Features
 
 - **Prompt-to-Project** — Describe your app in plain English and get a complete project with all files generated
+- **Dual LLM Support** — Works with Anthropic Claude and Google Gemini; switch providers by changing one env variable
 - **Multi-Language AST Parsing** — Understands and modifies code structure across Python, JavaScript, TypeScript, and more via Tree-sitter
 - **AI Code Assistant** — Chat with the AI to add features, fix bugs, create/delete/modify files in your generated project
-- **Token Usage Dashboard** — Tracks and estimates API cost per project and operation
+- **Token Usage Dashboard** — Tracks and estimates API cost per project and operation (provider-aware pricing)
 - **User Authentication** — JWT-based signup/login with MySQL backend
 - **SSH Deployment** — Deploy generated projects directly to a remote Linux server via SSH/SCP with PM2 support
 - **Project History** — Browse and reload previously generated projects
@@ -57,7 +177,8 @@ Then open **https://localhost:8000** in your browser.
 | Layer | Technology |
 |---|---|
 | Backend | Python 3.10+, FastAPI, Uvicorn |
-| AI | Anthropic Claude API (claude-sonnet) |
+| AI (Anthropic) | Claude Sonnet 4.5 / 4.6 via `anthropic` SDK |
+| AI (Gemini) | Gemini 2.0 / 2.5 Flash via `google-generativeai` SDK |
 | AST Parsing | Tree-sitter |
 | Auth | JWT (python-jose), bcrypt (passlib) |
 | Database | MySQL 8.0+ |
@@ -94,9 +215,14 @@ Verify installation:
 mysql --version
 ```
 
-### 3. Anthropic API Key
+### 3. An LLM API Key
 
-Get your API key at: https://console.anthropic.com/settings/keys
+You need **one** of the following:
+
+| Provider | Where to get it | Cost |
+|---|---|---|
+| Anthropic | https://console.anthropic.com/settings/keys | Pay-per-token |
+| Google Gemini | https://aistudio.google.com/app/apikey | Free tier + pay-per-token |
 
 ---
 
@@ -106,7 +232,7 @@ Get your API key at: https://console.anthropic.com/settings/keys
 
 ```bash
 git clone https://github.com/nanunh/genstack.git
-cd stackgpt
+cd genstack
 ```
 
 ### 2. Create a virtual environment
@@ -131,7 +257,7 @@ pip install -r requirements.txt
 
 ### 4. Generate SSL Certificates
 
-StackGPT runs over **HTTPS** and requires SSL certificate files in the `keys/` folder.
+genStack runs over **HTTPS** and requires SSL certificate files in the `keys/` folder.
 Run the included key generator to create self-signed certificates for local development:
 
 ```bash
@@ -171,23 +297,21 @@ Copy the example env file and fill in your values:
 cp .env.example .env
 ```
 
-Open `.env` and set:
+Open `.env` and set your LLM provider key and database credentials. See the [LLM Provider Setup](#llm-provider-setup) section above for full examples.
 
+Minimum required fields:
 ```env
-ANTHROPIC_API_KEY=sk-ant-your-api-key-here
+# Pick ONE provider:
+ANTHROPIC_API_KEY=sk-ant-...    # Anthropic Claude
+# or
+GEMINI_API_KEY=AIzaSy-...       # Google Gemini
 
+# Database
 DB_HOST=localhost
 DB_PORT=3306
 DB_NAME=stackgpt_db
 DB_USER=your_mysql_user
 DB_PASSWORD=your_mysql_password
-
-SECRET_KEY=your-random-secret-key-here
-```
-
-To generate a secure `SECRET_KEY`, run:
-```bash
-python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
 ---
@@ -249,33 +373,42 @@ https://localhost:8000
 
 You will be greeted by the login/signup page. Create an account and start generating projects.
 
-### Running in Enhanced MCP Mode
-
-```bash
-python3 server.py --enhanced
+The startup log confirms which LLM provider is active:
 ```
-
-This starts the server on port **443** (standard HTTPS) with enhanced MCP tool support.
+LLM provider : gemini (model: gemini-2.5-flash)
+```
+or
+```
+LLM provider : anthropic (model: claude-sonnet-4-5-20250929)
+```
 
 ---
 
 ## Project Structure
 
 ```
-stackgpt/
-├── server.py                  # Main FastAPI application & all API routes
+genstack/
+├── server.py                  # FastAPI application entry point
 ├── generate_keys.py           # SSL key pair generator (run before server.py)
 ├── auth.py                    # JWT authentication helpers
 ├── database.py                # MySQL connection & table initialization
+├── store.py                   # LLM client initialization & provider detection
+├── models.py                  # Pydantic data models
 ├── multiLanguageASTParser.py  # Tree-sitter multi-language AST parser
 ├── ast_cache_manager.py       # AST grammar cache manager
 ├── enhanced_ast_modifier.py   # AI-driven AST code modifier
 ├── token_usage_manager.py     # Token usage tracking & cost estimation
 ├── requirements.txt           # Python dependencies
 ├── .env.example               # Environment variable template
-├── keys/                      # SSL certificates (git-ignored, generate with generate_keys.py)
-│   ├── privkey.pem            # RSA private key
-│   └── fullchain.pem          # SSL certificate
+├── services/
+│   ├── llm_provider.py        # Unified Anthropic + Gemini streaming abstraction
+│   ├── project_generator.py   # MCP-based project generation logic
+│   ├── code_assistant.py      # AI code modification & chat logic
+│   └── mcp_tools.py           # MCP tool definitions and execution
+├── routes/                    # FastAPI route handlers
+├── keys/                      # SSL certificates (git-ignored)
+│   ├── privkey.pem
+│   └── fullchain.pem
 ├── static/                    # Frontend (HTML, CSS, JS)
 │   ├── index.html
 │   ├── login.html
@@ -293,18 +426,21 @@ stackgpt/
 
 ## Environment Variables Reference
 
-| Variable | Required | Description |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | Yes | Your Anthropic API key |
-| `SECRET_KEY` | Yes | JWT signing secret — generate with `python3 -c "import secrets; print(secrets.token_urlsafe(32))"` |
-| `SERVER_URL` | No | Server base URL (default: `https://localhost:8000`) |
-| `OUTPUT_DIR` | No | Generated projects directory (default: `generated_projects`) |
-| `LOG_LEVEL` | No | Logging verbosity (default: `INFO`) |
-| `DB_HOST` | Yes | MySQL host (default: `localhost`) |
-| `DB_PORT` | No | MySQL port (default: `3306`) |
-| `DB_NAME` | Yes | MySQL database name |
-| `DB_USER` | Yes | MySQL username |
-| `DB_PASSWORD` | Yes | MySQL password |
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `ANTHROPIC_API_KEY` | One of these two | — | Anthropic API key |
+| `GEMINI_API_KEY` | One of these two | — | Google Gemini API key |
+| `LLM_PROVIDER` | No | auto-detected | Force provider: `anthropic` or `gemini` |
+| `ANTHROPIC_MODEL` | No | `claude-sonnet-4-5-20250929` | Override Anthropic model |
+| `GEMINI_MODEL` | No | `gemini-2.0-flash` | Override Gemini model |
+| `SERVER_URL` | No | `https://localhost:8000` | Server base URL |
+| `OUTPUT_DIR` | No | `generated_projects` | Generated projects directory |
+| `LOG_LEVEL` | No | `INFO` | Logging verbosity |
+| `DB_HOST` | Yes | `localhost` | MySQL host |
+| `DB_PORT` | No | `3306` | MySQL port |
+| `DB_NAME` | Yes | — | MySQL database name |
+| `DB_USER` | Yes | — | MySQL username |
+| `DB_PASSWORD` | Yes | — | MySQL password |
 
 ---
 
