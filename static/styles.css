@@ -1229,6 +1229,30 @@ body::before {
 }
 .code-assistant-btn:active { transform: translateY(0); }
 
+/* Side Chat — teal */
+.side-chat-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.25rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(13, 148, 136, 0.35);
+}
+.side-chat-btn:hover {
+    background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(13, 148, 136, 0.45);
+}
+.side-chat-btn:active { transform: translateY(0); }
+
 /* Disabled state */
 .run-btn:disabled,
 .deploy-btn:disabled,
@@ -2912,6 +2936,7 @@ body.modal-open {
     flex-direction: column;
     transform: translateX(calc(100% + 40px));
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: visible;
 }
 
 .code-mod-panel.panel-open {
@@ -2919,7 +2944,24 @@ body.modal-open {
 }
 
 .code-mod-panel.panel-expanded {
-    width: 600px;
+    width: 720px;
+}
+
+/* Drag-to-resize handle on the left edge */
+.panel-resize-handle {
+    position: absolute;
+    left: -4px;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    cursor: ew-resize;
+    border-radius: 16px 0 0 16px;
+    z-index: 10;
+    transition: background 0.2s;
+}
+.panel-resize-handle:hover,
+.panel-resize-handle.resizing {
+    background: rgba(16, 185, 129, 0.35);
 }
 
 /* Panel Header - Matching Green Theme */
@@ -3175,42 +3217,58 @@ body.modal-open {
 
 /* Enhanced Tips Section */
 .enhanced-tips {
-    padding: 16px 20px;
+    padding: 10px 16px;
     background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
     border-bottom: 2px solid #10b981;
     flex-shrink: 0;
 }
 
 .enhanced-tips p {
-    margin: 0 0 14px 0;
+    margin: 0 0 8px 0;
     color: #065f46;
     font-weight: 600;
-    font-size: 15px;
+    font-size: 13px;
 }
 
 .tip-examples {
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+    flex-wrap: nowrap;       /* single row — no wrapping off-screen */
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;     /* room for scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: #10b981 transparent;
+}
+
+.tip-examples::-webkit-scrollbar {
+    height: 4px;
+}
+.tip-examples::-webkit-scrollbar-track {
+    background: transparent;
+}
+.tip-examples::-webkit-scrollbar-thumb {
+    background: #10b981;
+    border-radius: 2px;
 }
 
 .tip {
     background: white;
     color: #059669;
-    padding: 8px 14px;
+    padding: 6px 12px;
     border-radius: 14px;
     font-size: 12px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
-    border: 2px solid #10b981;
+    border: 1.5px solid #10b981;
+    white-space: nowrap;     /* keep each tip on one line */
+    flex-shrink: 0;          /* never compress tips */
 }
 
 .tip:hover {
     background: #10b981;
     color: white;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.2);
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
 }
 
 /* Chat Input Container */
@@ -3474,6 +3532,7 @@ main {
     border: 2px solid #10b981;
     border-radius: 16px;
     margin-bottom: 24px;
+    padding: 28px 32px;
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
 }
 
@@ -3692,6 +3751,15 @@ main {
     font-weight: 500;
 }
 
+.token-usage-line {
+    font-size: 11px;
+    color: #6b7280;
+    margin-top: 6px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(0,0,0,0.06);
+    font-family: monospace;
+}
+
 /* Scrollbar Styling */
 .code-assistant-messages::-webkit-scrollbar {
     width: 8px;
@@ -3709,6 +3777,30 @@ main {
 
 .code-assistant-messages::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(180deg, #059669 0%, #047857 100%);
+}
+
+/* Syntax-highlighted code blocks in chat messages */
+.code-block {
+    margin: 10px 0;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.5;
+    max-width: 100%;
+}
+
+.code-block code {
+    display: block;
+    padding: 14px 16px;
+    white-space: pre;
+}
+
+.inline-code {
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-family: monospace;
+    font-size: 0.875em;
 }
 
 /* Animations */
