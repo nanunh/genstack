@@ -3,7 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up - FullStack</title>
+    <title>Sign Up - genStack</title>
+    <script>
+        (function () {
+            if (localStorage.getItem('fs-theme') === 'light') {
+                document.documentElement.classList.add('theme-light');
+            }
+        })();
+    </script>
     <link rel="stylesheet" href="/static/auth-styles.css">
 </head>
 <body>
@@ -13,7 +20,7 @@
             <div class="branding">
                 <div class="logo">
                     <span class="logo-icon">🚀</span>
-                    <span class="logo-text">FullStack</span>
+                    <span class="logo-text">genStack</span>
                 </div>
                 <h1>Create Account</h1>
                 <p class="tagline">Join thousands of developers building amazing projects</p>
@@ -155,5 +162,6 @@
     </div>
 
     <script src="/static/auth.js"></script>
+    <script src="/static/theme.js"></script>
 </body>
 </html>

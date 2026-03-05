@@ -3,7 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FullStack - AI-Powered Project Generator</title>
+    <title>genStack - AI-Powered Project Generator</title>
+    <script>
+        // Apply stored theme before CSS loads — prevents flash of wrong theme
+        (function () {
+            if (localStorage.getItem('fs-theme') === 'light') {
+                document.documentElement.classList.add('theme-light');
+            }
+        })();
+    </script>
     <link rel="stylesheet" href="/static/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,7 +24,7 @@
         <div class="nav-container">
             <div class="nav-brand" onclick="goHome()" style="cursor: pointer;">
                 <span class="brand-icon">🚀</span>
-                <span class="brand-name">FullStack</span>
+                <span class="brand-name">genStack</span>
             </div>
             <div class="nav-actions">
                 <button class="nav-btn token-dashboard-btn">
@@ -25,9 +33,12 @@
                 <button class="nav-btn project-history-btn">
                     <span>📜</span> Project History
                 </button>
-                <button onclick="logout()" style="position: absolute; top: 20px; right: 20px; padding: 10px 20px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s ease; display: flex; align-items: center; gap: 8px;">
-                    <span>🚪</span>
-                    <span>Logout</span>
+                <button id="themeToggleBtn" class="theme-toggle-btn" onclick="toggleTheme()" title="Switch to light mode" aria-label="Switch to light mode">
+                    <span class="theme-icon">☀️</span>
+                </button>
+                <button onclick="logout()" class="logout-btn">
+                    <span class="logout-icon">🚪</span>
+                    <span class="logout-text">Logout</span>
                 </button>
             </div>
         </div>
@@ -315,12 +326,13 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="footer-content">
-            <p class="footer-text">© 2024 FullStack. Powered by Kochadai Technologies.</p>
+            <p class="footer-text">© 2024 genStack. Powered by Kochadai Technologies.</p>
         </div>
     </footer>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
     <script src="/static/app.js"></script>
+    <script src="/static/theme.js"></script>
 </body>
 </html>

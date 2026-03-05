@@ -1,26 +1,61 @@
+import asyncio
 import json
 import re
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Callable, Optional
 
 from models import FileContent, ProjectResponse
-from store import client, ANTHROPIC_API_KEY
-from token_usage_manager import global_token_manager, extract_token_usage
+from store import client
+from token_usage_manager import global_token_manager
 from services.mcp_tools import MCP_TOOLS, execute_mcp_tool
+from services.llm_provider import stream_llm, get_prompt_suffix, extract_json_from_response
 from utils.project_runner import generate_package_json, generate_readme
 
 
 async def create_project_with_mcp_streaming(
     prompt: str,
-    project_name: Optional[str] = None
+    project_name: Optional[str] = None,
+    progress_callback: Optional[Callable] = None,
+    cancel_flag: Optional[dict] = None
 ) -> ProjectResponse:
     """Generate project using Anthropic API with MCP tools - WITH TOKEN TRACKING"""
 
     if not client:
-        raise Exception("Anthropic API client not initialized. Please set ANTHROPIC_API_KEY environment variable.")
+        raise Exception("No LLM provider configured. Set ANTHROPIC_API_KEY or GEMINI_API_KEY.")
+
+    async def emit(event: dict):
+        if progress_callback:
+            await progress_callback(event)
 
     mcp_system_prompt = f"""You are an expert software engineer and UI/UX designer with access to MCP tools for DYNAMIC CODE GENERATION.
+
+═══════════════════════════════════════════════════════════
+FORBIDDEN PYTHON PATTERNS — VIOLATING THESE BREAKS THE APP
+═══════════════════════════════════════════════════════════
+The following patterns cause hard crashes and MUST NEVER appear in any generated file:
+
+1. eventlet / gevent — COMPLETELY FORBIDDEN
+   ✗ WRONG:  import eventlet; eventlet.monkey_patch()
+   ✗ WRONG:  from gevent import monkey; monkey.patch_all()
+   ✗ WRONG:  SocketIO(app, async_mode='eventlet')
+   ✗ WRONG:  SocketIO(app, async_mode='gevent')
+   ✗ WRONG:  eventlet or gevent in requirements.txt
+   ✓ CORRECT: import threading
+   ✓ CORRECT: SocketIO(app, async_mode='threading', cors_allowed_origins='*')
+
+2. @app.before_first_request — REMOVED in Flask 3.x, FORBIDDEN
+   ✗ WRONG:  @app.before_first_request
+             def startup(): ...
+   ✓ CORRECT: def startup(): ...
+              threading.Thread(target=startup, daemon=True).start()
+
+3. Background threads — use stdlib only
+   ✗ WRONG:  eventlet.spawn(...) / gevent.spawn(...)
+   ✓ CORRECT: threading.Thread(target=..., daemon=True).start()
+
+Always import threading at the top of any Python file that needs background tasks.
+═══════════════════════════════════════════════════════════
 
 CRITICAL INSTRUCTIONS:
 1. RESPOND ONLY WITH VALID JSON - no explanations, no markdown, no extra text
@@ -80,54 +115,57 @@ Response format (JSON only):
     print("[DEBUG] Making MCP-enabled streaming API call with token tracking...")
 
     try:
-        response_content = ""
+        loop = asyncio.get_event_loop()
         input_tokens = 0
         output_tokens = 0
 
-        with client.messages.stream(
-            model="claude-sonnet-4-5-20250929",
-            max_tokens=50000,
-            temperature=0.1,
-            system=mcp_system_prompt,
-            messages=[
-                {
+        def run_llm_stream():
+            """Run the synchronous LLM stream in a thread pool."""
+            def on_chunk(text: str):
+                print(text, end='', flush=True)
+                if progress_callback:
+                    asyncio.run_coroutine_threadsafe(
+                        progress_callback({"type": "token", "text": text}),
+                        loop
+                    )
+
+            return stream_llm(
+                system=mcp_system_prompt + get_prompt_suffix(response_format="json"),
+                messages=[{
                     "role": "user",
                     "content": f"Create a complete, production-ready project for: {prompt}\n\nUse MCP tools to build the project structure systematically."
-                }
-            ]
-        ) as stream:
-            for text in stream.text_stream:
-                response_content += text
-                print(text, end='', flush=True)
+                }],
+                max_tokens=50000,
+                temperature=0.1,
+                on_chunk=on_chunk,
+                response_format="json",
+            )
 
-            final_message = stream.get_final_message()
-            input_tokens, output_tokens = extract_token_usage(final_message)
+        response_content, input_tokens, output_tokens = await loop.run_in_executor(None, run_llm_stream)
 
-            if input_tokens > 0 or output_tokens > 0:
-                print(f"\n[TOKEN USAGE] Input: {input_tokens}, Output: {output_tokens}, Total: {input_tokens + output_tokens}")
-            else:
-                print(f"\n[DEBUG] Token usage not available in response")
+        if input_tokens > 0 or output_tokens > 0:
+            print(f"\n[TOKEN USAGE] Input: {input_tokens}, Output: {output_tokens}, Total: {input_tokens + output_tokens}")
+            await emit({"type": "progress", "tokens": input_tokens + output_tokens})
 
         print(f"\n[DEBUG] Got streaming response, length: {len(response_content)}")
 
-        json_match = re.search(r'```json\s*\n(.*?)\n```', response_content, re.DOTALL)
-        if json_match:
-            json_content = json_match.group(1)
-        else:
-            start_idx = response_content.find('{')
-            end_idx = response_content.rfind('}') + 1
-            if start_idx != -1 and end_idx > start_idx:
-                json_content = response_content[start_idx:end_idx]
-            else:
-                raise ValueError("No JSON found in response")
-
-        project_plan = json.loads(json_content)
-        print(f"[DEBUG] Parsed project plan: {len(project_plan.get('mcp_calls', []))} MCP calls")
+        project_plan = extract_json_from_response(response_content)
+        mcp_calls = project_plan.get("mcp_calls", [])
+        total_calls = len(mcp_calls)
+        print(f"[DEBUG] Parsed project plan: {total_calls} MCP calls")
 
         files = []
         dependencies = {"npm": [], "pip": []}
+        file_count = 0
 
-        for call in project_plan.get("mcp_calls", []):
+        for call in mcp_calls:
+            if not isinstance(call, dict):
+                print(f"[DEBUG] Skipping non-dict MCP call item: {type(call)} = {str(call)[:100]}")
+                continue
+
+            if cancel_flag and cancel_flag.get("cancelled"):
+                raise Exception("Generation cancelled by user")
+
             tool_name = call["tool"]
             parameters = call["parameters"]
             reasoning = call.get("reasoning", "")
@@ -138,6 +176,7 @@ Response format (JSON only):
                 result = await execute_mcp_tool(tool_name, parameters)
 
                 if result["type"] == "file_created":
+                    file_count += 1
                     files.append(FileContent(
                         path=result["path"],
                         content=result["content"],
@@ -185,7 +224,7 @@ Response format (JSON only):
             project_id=project_id,
             project_name=final_project_name,
             files=files,
-            instructions=project_plan.get("instructions", f"Project created with {len(project_plan.get('mcp_calls', []))} MCP tool calls"),
+            instructions=project_plan.get("instructions", f"Project created with {total_calls} MCP tool calls"),
             created_at=created_at,
             token_usage={
                 'input_tokens': input_tokens,
@@ -200,7 +239,7 @@ Response format (JSON only):
 
     except Exception as e:
         print(f"[DEBUG] MCP project generation failed: {e}")
-        raise Exception(f"Failed to generate project with MCP tools: {str(e)}")
+        raise
 
 
 async def create_project_from_files_streaming(
@@ -211,7 +250,7 @@ async def create_project_from_files_streaming(
     """Generate project based on uploaded files using streaming"""
 
     if not client:
-        raise Exception("Anthropic API client not initialized. Please set ANTHROPIC_API_KEY environment variable.")
+        raise Exception("No LLM provider configured. Set ANTHROPIC_API_KEY or GEMINI_API_KEY.")
 
     files_summary = []
     for file_path, file_info in files_data['files'].items():
@@ -228,6 +267,22 @@ async def create_project_from_files_streaming(
 
     mcp_system_prompt = f"""You are an expert software engineer analyzing uploaded project files and creating an IMPROVED version using MCP tools.
 
+═══════════════════════════════════════════════════════════
+FORBIDDEN PYTHON PATTERNS — VIOLATING THESE BREAKS THE APP
+═══════════════════════════════════════════════════════════
+1. eventlet / gevent — COMPLETELY FORBIDDEN
+   ✗ WRONG:  import eventlet; eventlet.monkey_patch()
+   ✗ WRONG:  SocketIO(app, async_mode='eventlet')
+   ✓ CORRECT: SocketIO(app, async_mode='threading', cors_allowed_origins='*')
+   If the uploaded code uses eventlet/gevent, REPLACE it with threading.
+
+2. @app.before_first_request — REMOVED in Flask 3.x, FORBIDDEN
+   ✗ WRONG:  @app.before_first_request
+             def startup(): ...
+   ✓ CORRECT: threading.Thread(target=startup, daemon=True).start()
+   If the uploaded code uses @app.before_first_request, FIX it automatically.
+═══════════════════════════════════════════════════════════
+
 Available MCP Tools:
 {json.dumps([{"name": name, "description": tool.description, "input_schema": tool.input_schema} for name, tool in MCP_TOOLS.items()], indent=2)}
 
@@ -235,6 +290,7 @@ ANALYSIS TASK:
 1. Analyze the uploaded files to understand the project structure and purpose
 2. Identify areas for improvement (better structure, missing files, updated dependencies, etc.)
 3. Create an ENHANCED version of the project with improvements
+4. AUTOMATICALLY FIX any forbidden patterns found in the uploaded code
 
 USER REQUEST: {analysis_prompt or "Analyze and improve this project"}
 
@@ -273,56 +329,34 @@ Response format (JSON only):
     print("[DEBUG] Making file-based MCP streaming API call...")
 
     try:
-        response_content = ""
-        input_tokens = 0
-        output_tokens = 0
-
-        with client.messages.stream(
-            model="claude-sonnet-4-5-20250929",
+        response_content, input_tokens, output_tokens = stream_llm(
+            system=mcp_system_prompt + get_prompt_suffix(response_format="json"),
+            messages=[{
+                "role": "user",
+                "content": f"Analyze these uploaded files and create an improved project version.\n\nUser request: {analysis_prompt or 'Create an enhanced version of this project'}"
+            }],
             max_tokens=50000,
             temperature=0.1,
-            system=mcp_system_prompt,
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"Analyze these uploaded files and create an improved project version.\n\nUser request: {analysis_prompt or 'Create an enhanced version of this project'}"
-                }
-            ]
-        ) as stream:
-            for text in stream.text_stream:
-                response_content += text
-                print(text, end='', flush=True)
+            on_chunk=lambda text: print(text, end='', flush=True),
+            response_format="json",
+        )
 
-            final_message = stream.get_final_message()
-            if hasattr(final_message, 'usage'):
-                input_tokens = final_message.usage.input_tokens
-                output_tokens = final_message.usage.output_tokens
-                total_tokens = input_tokens + output_tokens
-
-                print(f"\n[TOKEN USAGE] Input tokens: {input_tokens}")
-                print(f"[TOKEN USAGE] Output tokens: {output_tokens}")
-                print(f"[TOKEN USAGE] Total tokens: {total_tokens}")
+        if input_tokens > 0 or output_tokens > 0:
+            print(f"\n[TOKEN USAGE] Input: {input_tokens}, Output: {output_tokens}, Total: {input_tokens + output_tokens}")
 
         print(f"\n[DEBUG] Got file-based streaming response, length: {len(response_content)}")
 
-        json_match = re.search(r'```json\s*\n(.*?)\n```', response_content, re.DOTALL)
-        if json_match:
-            json_content = json_match.group(1)
-        else:
-            start_idx = response_content.find('{')
-            end_idx = response_content.rfind('}') + 1
-            if start_idx != -1 and end_idx > start_idx:
-                json_content = response_content[start_idx:end_idx]
-            else:
-                raise ValueError("No JSON found in response")
-
-        project_plan = json.loads(json_content)
+        project_plan = extract_json_from_response(response_content)
         print(f"[DEBUG] Parsed file-based project plan: {len(project_plan.get('mcp_calls', []))} MCP calls")
 
         files = []
         dependencies = {"npm": [], "pip": []}
 
         for call in project_plan.get("mcp_calls", []):
+            if not isinstance(call, dict):
+                print(f"[DEBUG] Skipping non-dict MCP call item: {type(call)} = {str(call)[:100]}")
+                continue
+
             tool_name = call["tool"]
             parameters = call["parameters"]
             reasoning = call.get("reasoning", "")

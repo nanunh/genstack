@@ -1,4 +1,37 @@
 /* AUTH PAGES - MODERN DESIGN */
+
+/* Auth Theme Variables — dark (default) */
+:root {
+    --auth-bg-from: #1e1b4b;
+    --auth-bg-to: #312e81;
+    --auth-container-bg: #1f2937;
+    --auth-right-bg: #111827;
+    --auth-right-text: #f9fafb;
+    --auth-input-bg: #1f2937;
+    --auth-input-border: #374151;
+    --auth-input-text: #f9fafb;
+    --auth-label-color: #d1d5db;
+    --auth-subtext-color: #9ca3af;
+    --auth-link-color: #34d399;
+    --auth-header-title: #f9fafb;
+}
+
+/* Light Theme Override for Auth */
+html.theme-light {
+    --auth-bg-from: #667eea;
+    --auth-bg-to: #764ba2;
+    --auth-container-bg: #ffffff;
+    --auth-right-bg: #fafafa;
+    --auth-right-text: #111827;
+    --auth-input-bg: #ffffff;
+    --auth-input-border: #e5e7eb;
+    --auth-input-text: #111827;
+    --auth-label-color: #374151;
+    --auth-subtext-color: #6b7280;
+    --auth-link-color: #10b981;
+    --auth-header-title: #111827;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -7,12 +40,13 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--auth-bg-from) 0%, var(--auth-bg-to) 100%);
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 20px;
+    transition: background 0.3s ease;
 }
 
 .auth-container {
@@ -20,7 +54,7 @@ body {
     grid-template-columns: 1fr 1fr;
     max-width: 1200px;
     width: 100%;
-    background: white;
+    background: var(--auth-container-bg);
     border-radius: 20px;
     overflow: hidden;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
@@ -157,7 +191,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #fafafa;
+    background: var(--auth-right-bg);
+    transition: background 0.3s ease;
 }
 
 .auth-form-container {
@@ -173,13 +208,13 @@ body {
 .auth-header h2 {
     font-size: 32px;
     font-weight: 700;
-    color: #111827;
+    color: var(--auth-header-title);
     margin-bottom: 8px;
 }
 
 .auth-header p {
     font-size: 15px;
-    color: #6b7280;
+    color: var(--auth-subtext-color);
 }
 
 /* FORM */
@@ -198,7 +233,7 @@ body {
 .form-group label {
     font-size: 14px;
     font-weight: 600;
-    color: #374151;
+    color: var(--auth-label-color);
 }
 
 .input-wrapper {
@@ -217,11 +252,12 @@ body {
 .input-wrapper input {
     width: 100%;
     padding: 14px 16px 14px 48px;
-    border: 2px solid #e5e7eb;
+    border: 2px solid var(--auth-input-border);
     border-radius: 12px;
     font-size: 15px;
     transition: all 0.2s;
-    background: white;
+    background: var(--auth-input-bg);
+    color: var(--auth-input-text);
 }
 
 .input-wrapper input:focus {
@@ -292,7 +328,7 @@ body {
     align-items: center;
     gap: 8px;
     cursor: pointer;
-    color: #374151;
+    color: var(--auth-label-color);
 }
 
 .checkbox-label input[type="checkbox"] {
@@ -303,7 +339,7 @@ body {
 }
 
 .forgot-password {
-    color: #10b981;
+    color: var(--auth-link-color);
     text-decoration: none;
     font-weight: 600;
 }
@@ -389,10 +425,10 @@ body {
 .btn-social {
     width: 100%;
     padding: 12px 24px;
-    border: 2px solid #e5e7eb;
+    border: 2px solid var(--auth-input-border);
     border-radius: 12px;
-    background: white;
-    color: #374151;
+    background: var(--auth-input-bg);
+    color: var(--auth-label-color);
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
@@ -419,11 +455,11 @@ body {
     text-align: center;
     margin-top: 30px;
     font-size: 14px;
-    color: #6b7280;
+    color: var(--auth-subtext-color);
 }
 
 .auth-footer a {
-    color: #10b981;
+    color: var(--auth-link-color);
     text-decoration: none;
     font-weight: 600;
 }

@@ -67,13 +67,14 @@ async def lifespan(app: FastAPI):
     await preload_recent_projects()
 
     from services.mcp_tools import MCP_TOOLS
-    from store import ANTHROPIC_API_KEY
+    from store import PROVIDER, DEFAULT_MODEL
 
     print(f"Projects in store: {len(projects_store)}")
     print(f"MCP tools available: {len(MCP_TOOLS)}")
+    print(f"LLM provider: {PROVIDER or 'NONE'} (model: {DEFAULT_MODEL})")
 
-    if not ANTHROPIC_API_KEY:
-        print("WARNING: ANTHROPIC_API_KEY not configured!")
+    if not PROVIDER:
+        print("WARNING: No LLM provider configured! Set ANTHROPIC_API_KEY or GEMINI_API_KEY.")
 
     print("Features enabled:")
     print("  - Intelligent natural language code modification")
@@ -201,7 +202,7 @@ if __name__ == "__main__":
         uvicorn.run(
             app,
             host="0.0.0.0",
-            port=8000,
+            port=8001,
             ssl_keyfile=ssl_keyfile,
             ssl_certfile=ssl_certfile,
             reload=False,
